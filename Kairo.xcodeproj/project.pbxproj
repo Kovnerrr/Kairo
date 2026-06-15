@@ -30,11 +30,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		55D05E8E2FD4523E0057EFAA /* Kairo */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Kairo;
-			sourceTree = "<group>";
-		};
 		55D05E9C2FD4523F0057EFAA /* KairoTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = KairoTests;
@@ -43,6 +38,11 @@
 		55D05EA62FD4523F0057EFAA /* KairoUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = KairoUITests;
+			sourceTree = "<group>";
+		};
+		55D05EC32FDB4BA10057EFAA /* Kairo */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Kairo;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,7 +75,7 @@
 		55D05E832FD4523E0057EFAA = {
 			isa = PBXGroup;
 			children = (
-				55D05E8E2FD4523E0057EFAA /* Kairo */,
+				55D05EC32FDB4BA10057EFAA /* Kairo */,
 				55D05E9C2FD4523F0057EFAA /* KairoTests */,
 				55D05EA62FD4523F0057EFAA /* KairoUITests */,
 				55D05E8D2FD4523E0057EFAA /* Products */,
@@ -108,7 +108,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				55D05E8E2FD4523E0057EFAA /* Kairo */,
+				55D05EC32FDB4BA10057EFAA /* Kairo */,
 			);
 			name = Kairo;
 			packageProductDependencies = (
