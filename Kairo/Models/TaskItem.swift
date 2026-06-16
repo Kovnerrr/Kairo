@@ -25,6 +25,12 @@ final class TaskItem {
     /// Date when the task should be completed
     var dueDate: Date
     
+    /// Stores the task priority as a raw string value for SwiftData persistence
+    var priorityRaw: String
+    
+    /// Stores the task category as a raw string value for SwiftData persistence
+    var categoryRaw: String
+    
     /// Indicates whether the task is completed
     var isCompleted: Bool
     
@@ -34,6 +40,25 @@ final class TaskItem {
     /// Date when the task was completed. Nil means that the task is still active
     var completedAt: Date?
     
+    // MARK: - Computed Properties
+    var priority: TaskPriority {
+        get {
+            TaskPriority(rawValue: priorityRaw) ?? .medium
+        }
+        set {
+            priorityRaw = newValue.rawValue
+        }
+    }
+    
+    var category: TaskCategory {
+        get {
+            TaskCategory(rawValue: categoryRaw) ?? .personal
+        }
+        set {
+            categoryRaw = newValue.rawValue
+        }
+    }
+    
     // MARK: - Initialization
     
     init(
@@ -41,6 +66,8 @@ final class TaskItem {
         title: String,
         taskDescription: String? = nil,
         dueDate: Date = .now,
+        priority: TaskPriority = .medium,
+        category: TaskCategory = .personal,
         isCompleted: Bool = false,
         createdAt: Date = .now,
         completedAt: Date? = nil
@@ -49,6 +76,8 @@ final class TaskItem {
         self.title = title
         self.taskDescription = taskDescription
         self.dueDate = dueDate
+        self.priorityRaw = priority.rawValue
+        self.categoryRaw = category.rawValue
         self.isCompleted = isCompleted
         self.createdAt = createdAt
         self.completedAt = completedAt
