@@ -74,4 +74,17 @@ final class TaskListViewModel {
             }
         }
     }
+    
+    // MARK: - Statistics
+    func statistics(from tasks: [TaskItem]) -> TaskStatistics {
+        let total = tasks.count
+        
+        let completed = tasks.filter { task in
+            task.isCompleted
+        }.count
+        
+        let pending = total - completed
+        
+        return TaskStatistics(total: total, completed: completed, pending: pending)
+    }
 }
