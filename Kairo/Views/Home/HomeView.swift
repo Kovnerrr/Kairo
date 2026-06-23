@@ -23,11 +23,7 @@ struct HomeView: View {
         NavigationStack {
             List {
                 Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Total: \(statistics.total)")
-                        Text("Completed: \(statistics.completed)")
-                        Text("Pending: \(statistics.pending)")
-                    }
+                    StatisticsHeaderView(statistics: statistics)
                 }
                 
                 Section("Tasks") {
