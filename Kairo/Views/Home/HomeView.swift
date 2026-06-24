@@ -28,18 +28,7 @@ struct HomeView: View {
                 
                 Section("Tasks") {
                     ForEach(visibleTasks, id: \.id) { task in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(task.title)
-                                .font(.headline)
-                            
-                            Text(task.category.title)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            
-                            Text(task.priority.title)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                        TaskCardView(task: task)
                     }
                 }
             }
