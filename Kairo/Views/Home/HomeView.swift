@@ -27,8 +27,16 @@ struct HomeView: View {
                 }
                 
                 Section("Tasks") {
-                    ForEach(visibleTasks, id: \.id) { task in
-                        TaskCardView(task: task)
+                    if visibleTasks.isEmpty {
+                        EmptyStateView(
+                            systemImageName: "tray",
+                            title: "No tasks yet",
+                            message: "Tap the plus button to create your first task"
+                        )
+                    } else {
+                        ForEach(visibleTasks, id: \.id) { task in
+                            TaskCardView(task: task)
+                        }
                     }
                 }
             }

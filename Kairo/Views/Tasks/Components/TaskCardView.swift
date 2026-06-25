@@ -24,6 +24,7 @@ struct TaskCardView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(task.title)
                         .font(.headline)
+                        .strikethrough(task.isCompleted)
                     
                     if let description = task.taskDescription,
                        !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -42,15 +43,35 @@ struct TaskCardView: View {
             }
             
             HStack(spacing: 8) {
-                Text(task.category.title)
-                Text(task.priority.title)
+                metadataBadge(
+                    title: task.category.title,
+                    systemImageName: task.category.systemImageName
+                )
+                
+                metadataBadge(title: task.priority.title)
+                
                 Text(formattedDueDate)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+    }
+    
+    private func metadataBadge(title: String, systemImageName: String? = nil) -> some View {
+        HStack(spacing: 4) {
+            if let systemImageName {
+                Image(systemName: systemImageName)
+            }
+            
+            Text(title)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(.secondary.opacity(0.12), in: Capsule())
     }
 }
 
