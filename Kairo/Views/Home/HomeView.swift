@@ -10,6 +10,7 @@ import SwiftData
 
 struct HomeView: View {
     // MARK: - Data
+    @Environment(\.modelContext) private var modelContext
     @Query private var tasks: [TaskItem]
     
     // MARK: - State
@@ -51,7 +52,48 @@ struct HomeView: View {
                     .accessibilityLabel("Add Task")
                 }
             }
+            .sheet(item: $viewModel.formRoute) { route in
+                switch route {
+                case .create:
+                    TaskFormView(
+                        onCancel: {
+                            viewModel.closeForm()
+                        },
+                        onSave: { title, taskDescription, dueDate, priority, category in createTask(
+                            title: title,
+                            taskDescription: taskDescription,
+                            dueDate: dueDate,
+                            priority: priority,
+                            category: category
+                        )
+                        }
+                    )
+                    
+                case .edit(let task):
+                    Text("Edit task: \(task.title)")
+                }
+            }
         }
+    }
+    
+    // MARK: - Private Methods
+    private func createTask(
+        title: String,
+        taskDescription: String?,
+        dueDate: Date,
+        priority: TaskPriority,
+        category: TaskCategory
+    ) {
+        let task = TaskItem(
+            title: title,
+            taskDescription: taskDescription,
+            dueDate: dueDate,
+            priority: priority,
+            category: category
+        )
+        
+        modelContext.insert(task)
+        viewModel.closeForm()
     }
 }
 

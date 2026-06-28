@@ -19,12 +19,27 @@ struct TaskFormView: View {
     // MARK: - Actions
     
     let onCancel: () -> Void
-    let onSave: () -> Void
+    let onSave: (
+        String,
+        String?,
+        Date,
+        TaskPriority,
+        TaskCategory,
+    ) -> Void
     
     // MARK: - Computed Properties
     
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private var trimmedDescription: String? {
+        let trimmedValue = taskDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedValue.isEmpty ? nil : trimmedValue
+    }
+    
     private var isSaveDisabled: Bool {
-        title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        trimmedTitle.isEmpty
     }
     
     // MARK: - Body
@@ -75,7 +90,13 @@ struct TaskFormView: View {
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        onSave()
+                        onSave(
+                            trimmedTitle,
+                            trimmedDescription,
+                            dueDate,
+                            priority,
+                            category
+                        )
                     }
                     .disabled(isSaveDisabled)
                 }
@@ -87,6 +108,6 @@ struct TaskFormView: View {
 #Preview {
     TaskFormView(
         onCancel: {},
-        onSave: {}
+        onSave: { _, _, _, _, _ in }
     )
 }
