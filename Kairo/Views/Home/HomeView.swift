@@ -36,7 +36,12 @@ struct HomeView: View {
                         )
                     } else {
                         ForEach(visibleTasks, id: \.id) { task in
-                            TaskCardView(task: task)
+                            TaskCardView(
+                                task: task,
+                                onToggleCompleted: {
+                                    toggleTaskCompletion(task)
+                                }
+                            )
                         }
                     }
                 }
@@ -94,6 +99,11 @@ struct HomeView: View {
         
         modelContext.insert(task)
         viewModel.closeForm()
+    }
+    
+    private func toggleTaskCompletion(_ task: TaskItem) {
+        task.isCompleted.toggle()
+        task.completedAt = task.isCompleted ? .now : nil
     }
 }
 

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct TaskCardView: View {
     let task: TaskItem
+    let onToggleCompleted: () -> Void
     
     private var formattedDueDate: String {
         task.dueDate.formatted(date: .abbreviated, time: .omitted)
@@ -18,9 +19,26 @@ struct TaskCardView: View {
         task.isCompleted ? "Completed" : "Active"
     }
     
+    private var completionButtonImageName: String {
+        task.isCompleted ? "checkmark.circle.fill" : "circle"
+    }
+    
+    private var completionButtonAccessibilityLabel: String {
+        task.isCompleted ? "Mark as active" : "Mark as completed"
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 8) {
+                Button {
+                    onToggleCompleted()
+                } label: {
+                    Image(systemName: completionButtonImageName)
+                        .font(.title3)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(completionButtonAccessibilityLabel)
+                
                 VStack(alignment: .leading, spacing: 4) {
                     Text(task.title)
                         .font(.headline)
@@ -56,7 +74,6 @@ struct TaskCardView: View {
             }
         }
         .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
     }
     
     private func metadataBadge(title: String, systemImageName: String? = nil) -> some View {
@@ -76,6 +93,6 @@ struct TaskCardView: View {
 }
 
 #Preview {
-    TaskCardView(task: SampleData.tasks[0])
+    TaskCardView(task: SampleData.tasks[0], onToggleCompleted: {})
         .padding()
 }
