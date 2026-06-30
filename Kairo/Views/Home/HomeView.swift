@@ -42,6 +42,13 @@ struct HomeView: View {
                                     toggleTaskCompletion(task)
                                 }
                             )
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    deleteTask(task)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
                     }
                 }
@@ -104,6 +111,10 @@ struct HomeView: View {
     private func toggleTaskCompletion(_ task: TaskItem) {
         task.isCompleted.toggle()
         task.completedAt = task.isCompleted ? .now : nil
+    }
+    
+    private func deleteTask(_ task: TaskItem) {
+        modelContext.delete(task)
     }
 }
 
