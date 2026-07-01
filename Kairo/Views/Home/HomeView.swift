@@ -48,6 +48,12 @@ struct HomeView: View {
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
+                                Button {
+                                    viewModel.openEditForm(for: task)
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
                             }
                         }
                     }
@@ -122,3 +128,4 @@ struct HomeView: View {
     HomeView()
         .modelContainer(PreviewContainer.container)
 }
+
