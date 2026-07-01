@@ -10,22 +10,38 @@ import SwiftUI
 struct TaskFormView: View {
     // MARK: - Form State
     
-    @State private var title: String = ""
-    @State private var taskDescription: String = ""
-    @State private var dueDate: Date = .now
-    @State private var priority: TaskPriority = .medium
-    @State private var category: TaskCategory = .personal
+    @State private var title: String
+    @State private var taskDescription: String
+    @State private var dueDate: Date
+    @State private var priority: TaskPriority
+    @State private var category: TaskCategory
+    
+    // MARK: - Properties
+    
+    let navigationTitle: String
     
     // MARK: - Actions
     
     let onCancel: () -> Void
-    let onSave: (
-        String,
-        String?,
-        Date,
-        TaskPriority,
-        TaskCategory,
-    ) -> Void
+    let onSave: (TaskFormData) -> Void
+    
+    // MARK: - Initialization
+    
+    init(
+        navigationTitle: String,
+        initialData: TaskFormData = TaskFormData(),
+        onCancel: @escaping () -> Void,
+        onSave: @escaping (TaskFormData) -> Void
+    ) {
+        self._title = State(initialValue: initialData.title)
+        self._taskDescription = State(initialValue: initialData.taskDescription ?? "")
+        self._dueDate = State(initialValue: initialData.dueDate)
+        self._priority = State(initialValue: initialData.priority)
+        self._category = State(initialValue: initialData.category)
+        self.navigationTitle = navigationTitle
+        self.onCancel = onCancel
+        self.onSave = onSave
+    }
     
     // MARK: - Computed Properties
     
@@ -36,6 +52,16 @@ struct TaskFormView: View {
     private var trimmedDescription: String? {
         let trimmedValue = taskDescription.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedValue.isEmpty ? nil : trimmedValue
+    }
+    
+    private var formData: TaskFormData {
+        TaskFormData(
+            title: trimmedTitle,
+            taskDescription: trimmedDescription,
+            dueDate: dueDate,
+            priority: priority,
+            category: category
+        )
     }
     
     private var isSaveDisabled: Bool {
@@ -79,7 +105,7 @@ struct TaskFormView: View {
                     }
                 }
             }
-            .navigationTitle("New Task")
+            .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -90,13 +116,7 @@ struct TaskFormView: View {
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        onSave(
-                            trimmedTitle,
-                            trimmedDescription,
-                            dueDate,
-                            priority,
-                            category
-                        )
+                        onSave(formData)
                     }
                     .disabled(isSaveDisabled)
                 }
@@ -105,9 +125,25 @@ struct TaskFormView: View {
     }
 }
 
-#Preview {
+#Preview("Create") {
     TaskFormView(
+        navigationTitle: "New Task",
         onCancel: {},
-        onSave: { _, _, _, _, _ in }
+        onSave: { _ in }
+    )
+}
+
+#Preview("Edit") {
+    TaskFormView(
+        navigationTitle: "Edit Task",
+        initialData: TaskFormData(
+            title: "Prepare app screenshots",
+            taskDescription: "Make screenshots for the portfolio README.",
+            dueDate: .now,
+            priority: .high,
+            category: .work
+        ),
+        onCancel: {},
+        onSave: { _ in }
     )
 }

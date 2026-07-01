@@ -74,43 +74,57 @@ struct HomeView: View {
                 switch route {
                 case .create:
                     TaskFormView(
+                        navigationTitle: "New Task",
                         onCancel: {
                             viewModel.closeForm()
                         },
-                        onSave: { title, taskDescription, dueDate, priority, category in createTask(
-                            title: title,
-                            taskDescription: taskDescription,
-                            dueDate: dueDate,
-                            priority: priority,
-                            category: category
-                        )
+                        onSave: { formData in
+                            createTask(from: formData)
                         }
                     )
                     
                 case .edit(let task):
-                    Text("Edit task: \(task.title)")
+                    TaskFormView(
+                        navigationTitle: "Edit Task",
+                        initialData: TaskFormData(
+                            title: task.title,
+                            taskDescription: task.taskDescription,
+                            dueDate: task.dueDate,
+                            priority: task.priority,
+                            category: task.category
+                        ),
+                        onCancel: {
+                            viewModel.closeForm()
+                        },
+                        onSave: { formData in
+                            updateTask(task, with: formData)
+                        }
+                    )
                 }
             }
         }
     }
     
     // MARK: - Private Methods
-    private func createTask(
-        title: String,
-        taskDescription: String?,
-        dueDate: Date,
-        priority: TaskPriority,
-        category: TaskCategory
-    ) {
+    private func createTask(from formData: TaskFormData) {
         let task = TaskItem(
-            title: title,
-            taskDescription: taskDescription,
-            dueDate: dueDate,
-            priority: priority,
-            category: category
+            title: formData.title,
+            taskDescription: formData.taskDescription,
+            dueDate: formData.dueDate,
+            priority: formData.priority,
+            category: formData.category
         )
-        
         modelContext.insert(task)
+        viewModel.closeForm()
+    }
+    
+    private func updateTask(_ task: TaskItem, with formData: TaskFormData) {
+        task.title = formData.title
+        task.taskDescription = formData.taskDescription
+        task.dueDate = formData.dueDate
+        task.priority = formData.priority
+        task.category = formData.category
+        
         viewModel.closeForm()
     }
     
