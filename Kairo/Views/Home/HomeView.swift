@@ -16,6 +16,56 @@ struct HomeView: View {
     // MARK: - State
     @State private var viewModel = TaskListViewModel()
     
+    // MARK: - Computed Properties
+    private var trimmedSearchText: String {
+        viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private var emptyStateSystemImageName: String {
+        tasks.isEmpty ? "tray" : "magnifyingglass"
+    }
+    
+    private var emptyStateTitle: String {
+        if tasks.isEmpty {
+            return "No tasks yet"
+        }
+        
+        if !trimmedSearchText.isEmpty {
+            return "No matching tasks"
+        }
+        
+        switch viewModel.selectedFilter {
+        case .all:
+            return "No tasks"
+        case .active:
+            return "No active tasks"
+        case .completed:
+            return "No completed tasks"
+        case .priority:
+            return "No \(viewModel.selectedPriority.title.lowercased()) priority tasks"
+        }
+    }
+    
+    private var emptyStateMessage: String {
+        if tasks.isEmpty {
+            return "Tap the plus button to create your first task."
+        }
+        if !trimmedSearchText.isEmpty {
+            return "Try changing your search text or filters."
+        }
+        
+        switch viewModel.selectedFilter {
+        case .all:
+            return "Try creating a new task."
+        case .active:
+            return "Completed tasks are hidden by the current filter."
+        case .completed:
+            return "Complete a task and it will appear here."
+        case .priority:
+            return "Try selecting another priority or creating a matching task."
+        }
+    }
+    
     // MARK: - Body
     var body: some View {
         let statistics = viewModel.statistics(from: tasks)
@@ -27,12 +77,14 @@ struct HomeView: View {
                     StatisticsHeaderView(statistics: statistics)
                 }
                 
+                TaskListControlsView(viewModel: viewModel)
+                
                 Section("Tasks") {
                     if visibleTasks.isEmpty {
                         EmptyStateView(
-                            systemImageName: "tray",
-                            title: "No tasks yet",
-                            message: "Tap the plus button to create your first task"
+                            systemImageName: emptyStateSystemImageName,
+                            title: emptyStateTitle,
+                            message: emptyStateMessage
                         )
                     } else {
                         ForEach(visibleTasks, id: \.id) { task in
@@ -48,6 +100,7 @@ struct HomeView: View {
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
+                                
                                 Button {
                                     viewModel.openEditForm(for: task)
                                 } label: {
@@ -60,6 +113,7 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("Kairo")
+            .searchable(text: $viewModel.searchText, prompt: "Search tasks")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
