@@ -11,9 +11,33 @@ struct TaskCardView: View {
     let task: TaskItem
     let onToggleCompleted: () -> Void
     
-    private var formattedDueDate: String {
-        task.dueDate.formatted(date: .abbreviated, time: .omitted)
+    private var isOverdue: Bool {
+        guard !task.isCompleted else { return false }
+        return Calendar.current
+            .startOfDay(for: task.dueDate) < Calendar.current.startOfDay(for: .now)
     }
+    
+    private var dueDateText: String {
+        if isOverdue {
+            return "Overdue"
+        }
+        
+        if Calendar.current.isDateInToday(task.dueDate) {
+            return "Today"
+        }
+        
+        if Calendar.current.isDateInTomorrow(task.dueDate) {
+            return "Tomorrow"
+        }
+        
+        return task.dueDate.formatted(date: .abbreviated, time: .omitted)
+    }
+    
+    private var dueDateSystemImageName: String {
+        isOverdue ? "exclamationmark.triangle" : "calendar"
+    }
+    
+
     
     private var statusTitle: String {
         task.isCompleted ? "Completed" : "Active"
@@ -66,17 +90,26 @@ struct TaskCardView: View {
                     systemImageName: task.category.systemImageName
                 )
                 
-                metadataBadge(title: task.priority.title)
+                metadataBadge(
+                    title: task.priority.title,
+                    systemImageName: task.priority.systemImageName
+                )
                 
-                Text(formattedDueDate)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                metadataBadge(
+                    title: dueDateText,
+                    systemImageName: dueDateSystemImageName,
+                    isProminent: isOverdue
+                )
             }
         }
         .padding(.vertical, 4)
     }
     
-    private func metadataBadge(title: String, systemImageName: String? = nil) -> some View {
+    private func metadataBadge(
+        title: String,
+        systemImageName: String? = nil,
+        isProminent: Bool = false
+    ) -> some View {
         HStack(spacing: 4) {
             if let systemImageName {
                 Image(systemName: systemImageName)
@@ -85,14 +118,50 @@ struct TaskCardView: View {
             Text(title)
         }
         .font(.caption)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(isProminent ? Color.red : Color.secondary)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(.secondary.opacity(0.12), in: Capsule())
+        .background(
+            isProminent ? Color.red.opacity(0.12) : Color.secondary.opacity(0.12),
+            in: Capsule()
+        )
     }
 }
 
-#Preview {
+#Preview("Active") {
     TaskCardView(task: SampleData.tasks[0], onToggleCompleted: {})
         .padding()
+}
+
+#Preview("Completed") {
+    TaskCardView(
+        task: TaskItem(
+            title: "Completed task",
+            dueDate: .now,
+            priority: .medium,
+            category: .work,
+            isCompleted: true,
+            completedAt: .now
+        ),
+        onToggleCompleted: {}
+    )
+    .padding()
+}
+
+#Preview("Overdue") {
+    TaskCardView(
+        task: TaskItem(
+            title: "Overdue task",
+            dueDate: Calendar.current
+                .date(
+                    byAdding: .day,
+                    value: -1,
+                    to: .now
+                ) ?? .now,
+            priority: .high,
+            category: .study
+        ),
+        onToggleCompleted: {}
+    )
+    .padding()
 }

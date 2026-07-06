@@ -25,6 +25,16 @@ enum TaskPriority: String, CaseIterable, Identifiable, Codable {
         }
     }
     
+    var systemImageName: String {
+        switch self {
+        case .low:
+            "arrow.down.circle"
+        case .medium:
+            "minus.circle"
+        case .high:
+            "arrow.up.circle"
+        }
+    }
     // MARK: - Sorting
     var sortWeight: Int {
         switch self {
