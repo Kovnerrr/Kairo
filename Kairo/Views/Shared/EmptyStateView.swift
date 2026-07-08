@@ -11,33 +11,68 @@ struct EmptyStateView: View {
     let systemImageName: String
     let title: String
     let message: String
+    let actionTitle: String?
+    let action: (() -> Void)?
+    
+    init(
+        systemImageName: String,
+        title: String,
+        message: String,
+        actionTitle: String? = nil,
+        action: (() -> Void)? = nil
+    ) {
+        self.systemImageName = systemImageName
+        self.title = title
+        self.message = message
+        self.actionTitle = actionTitle
+        self.action = action
+    }
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             Image(systemName: systemImageName)
-                .font(.system(size: 40))
+                .font(.system(size: 44))
                 .foregroundStyle(.secondary)
             
-            Text(title)
-                .font(.headline)
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.headline)
+                
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
             
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            if let actionTitle, let action {
+                Button(actionTitle) {
+                    action()
+                }
+                .buttonStyle(.borderedProminent)
+            }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title). \(message)")
+        .padding(.vertical, 40)
+        .padding(.horizontal)
     }
 }
 
-#Preview {
+#Preview("No Action") {
+    EmptyStateView(
+        systemImageName: "magnifyingglass",
+        title: "No matching tasks",
+        message: "Try changing your search text or filters."
+    )
+    .padding()
+}
+
+#Preview("With Action") {
     EmptyStateView(
         systemImageName: "tray",
         title: "No tasks yet",
-        message: "Tap the plus button to create your first task"
+        message: "Tap the button below to create your first task.",
+        actionTitle: "Create Task",
+        action: {}
     )
     .padding()
 }

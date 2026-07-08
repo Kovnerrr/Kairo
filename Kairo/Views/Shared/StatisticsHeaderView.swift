@@ -15,24 +15,47 @@ struct StatisticsHeaderView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Overview")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 16) {
+            header
+            
+            ProgressView(value: statistics.completionRate)
+                .accessibilityLabel("Completion progress")
+                .accessibilityValue("\(completionPercentage) percent")
             
             HStack(spacing: 12) {
                 statisticItem(title: "Total", value: statistics.total)
                 statisticItem(title: "Completed", value: statistics.completed)
                 statisticItem(title: "Pending", value: statistics.pending)
             }
+        }
+        .padding()
+        .background(
+            Color.secondary.opacity(0.08),
+            in: RoundedRectangle(cornerRadius: 8)
+        )
+    }
+    
+    private var header: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Overview")
+                    .font(.headline)
+                
+                Text("Completion: \(completionPercentage)%")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
             
-            Text("Completion: \(completionPercentage)%")
-                .font(.subheadline)
+            Spacer()
+            
+            Image(systemName: "chart.bar.fill")
+                .font(.title3)
                 .foregroundStyle(.secondary)
         }
     }
     
     private func statisticItem(title: String, value: Int) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text("\(value)")
                 .font(.title2)
                 .fontWeight(.bold)
@@ -47,9 +70,23 @@ struct StatisticsHeaderView: View {
     }
 }
 
-#Preview {
+#Preview("Empty") {
+    StatisticsHeaderView(
+        statistics: TaskStatistics(total: 0, completed: 0, pending: 0)
+    )
+    .padding()
+}
+
+#Preview("Partial") {
     StatisticsHeaderView(
         statistics: TaskStatistics(total: 10, completed: 4, pending: 6)
+    )
+    .padding()
+}
+
+#Preview("Complete") {
+    StatisticsHeaderView(
+        statistics: TaskStatistics(total: 8, completed: 8, pending: 0)
     )
     .padding()
 }

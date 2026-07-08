@@ -81,11 +81,23 @@ struct HomeView: View {
                 
                 Section("Tasks") {
                     if visibleTasks.isEmpty {
-                        EmptyStateView(
-                            systemImageName: emptyStateSystemImageName,
-                            title: emptyStateTitle,
-                            message: emptyStateMessage
-                        )
+                        if tasks.isEmpty {
+                            EmptyStateView(
+                                systemImageName: emptyStateSystemImageName,
+                                title: emptyStateTitle,
+                                message: emptyStateMessage,
+                                actionTitle: "Create Task",
+                                action: {
+                                    viewModel.openCreateForm()
+                                }
+                            )
+                        } else {
+                            EmptyStateView(
+                                systemImageName: emptyStateSystemImageName,
+                                title: emptyStateTitle,
+                                message: emptyStateMessage
+                            )
+                        }
                     } else {
                         ForEach(visibleTasks, id: \.id) { task in
                             TaskCardView(
@@ -100,7 +112,7 @@ struct HomeView: View {
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
-                                
+
                                 Button {
                                     viewModel.openEditForm(for: task)
                                 } label: {
