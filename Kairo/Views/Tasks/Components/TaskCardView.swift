@@ -125,6 +125,8 @@ struct TaskCardView: View {
             isProminent ? Color.red.opacity(0.12) : Color.secondary.opacity(0.12),
             in: Capsule()
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
     }
 }
 

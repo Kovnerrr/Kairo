@@ -51,6 +51,7 @@ struct StatisticsHeaderView: View {
             Image(systemName: "chart.bar.fill")
                 .font(.title3)
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
         }
     }
     

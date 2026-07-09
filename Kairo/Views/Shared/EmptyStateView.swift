@@ -33,6 +33,7 @@ struct EmptyStateView: View {
             Image(systemName: systemImageName)
                 .font(.system(size: 44))
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
             
             VStack(spacing: 6) {
                 Text(title)
