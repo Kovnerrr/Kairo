@@ -65,13 +65,13 @@ struct TaskCardView: View {
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(task.title)
-                        .font(.headline)
+                        .font(AppTheme.Typography.cardTitle)
                         .strikethrough(task.isCompleted)
                     
                     if let description = task.taskDescription,
                        !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text(description)
-                            .font(.subheadline)
+                            .font(AppTheme.Typography.secondary)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
                     }
@@ -80,7 +80,7 @@ struct TaskCardView: View {
                 Spacer()
                 
                 Text(statusTitle)
-                    .font(.caption)
+                    .font(AppTheme.Typography.badge)
                     .foregroundStyle(.secondary)
             }
             
@@ -102,6 +102,15 @@ struct TaskCardView: View {
                 )
             }
         }
+        .padding()
+        .background(
+            AppTheme.surface,
+            in: RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius)
+                .stroke(AppTheme.border, lineWidth: 1)
+        }
         .padding(.vertical, 4)
     }
     
@@ -116,13 +125,15 @@ struct TaskCardView: View {
             }
             
             Text(title)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .font(.caption)
+        .font(AppTheme.Typography.badge)
         .foregroundStyle(isProminent ? Color.red : Color.secondary)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(
-            isProminent ? Color.red.opacity(0.12) : Color.secondary.opacity(0.12),
+            isProminent ? Color.red.opacity(0.12) : AppTheme.accentSoft,
             in: Capsule()
         )
         .accessibilityElement(children: .ignore)
@@ -133,6 +144,7 @@ struct TaskCardView: View {
 #Preview("Active") {
     TaskCardView(task: SampleData.tasks[0], onToggleCompleted: {})
         .padding()
+        .background(AppTheme.background)
 }
 
 #Preview("Completed") {
@@ -148,6 +160,7 @@ struct TaskCardView: View {
         onToggleCompleted: {}
     )
     .padding()
+    .background(AppTheme.background)
 }
 
 #Preview("Overdue") {
@@ -166,4 +179,5 @@ struct TaskCardView: View {
         onToggleCompleted: {}
     )
     .padding()
+    .background(AppTheme.background)
 }

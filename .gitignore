@@ -8,3 +8,5 @@ DerivedData/
 *.moved-aside
 *.xccheckout
 *.xcworkspace/xcuserdata/
+# VS Code workspace files
+*.code-workspace

@@ -75,13 +75,16 @@ struct TaskFormView: View {
             Form {
                 Section("Details") {
                     TextField("Title", text: $title)
+                        .font(AppTheme.Typography.textField)
                     TextField(
                         "Description",
                         text: $taskDescription,
                         axis: .vertical
                     )
+                    .font(AppTheme.Typography.textField)
                     .lineLimit(3...6)
                 }
+                .listRowBackground(AppTheme.surface)
                 
                 Section("Schedule") {
                     DatePicker(
@@ -90,6 +93,7 @@ struct TaskFormView: View {
                         displayedComponents: .date
                     )
                 }
+                .listRowBackground(AppTheme.surface)
                 
                 Section("Organization") {
                     Picker("Priority", selection: $priority) {
@@ -104,19 +108,28 @@ struct TaskFormView: View {
                         }
                     }
                 }
+                .listRowBackground(AppTheme.surface)
             }
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.background)
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button {
                         onCancel()
+                    } label: {
+                        Text("Cancel")
+                            .font(AppTheme.Typography.button)
                     }
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button {
                         onSave(formData)
+                    } label: {
+                        Text("Save")
+                            .font(AppTheme.Typography.button)
                     }
                     .disabled(isSaveDisabled)
                 }

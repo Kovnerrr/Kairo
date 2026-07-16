@@ -72,100 +72,134 @@ struct HomeView: View {
         let visibleTasks = viewModel.filteredAndSortedTasks(from: tasks)
         
         NavigationStack {
-            List {
-                Section {
-                    StatisticsHeaderView(statistics: statistics)
-                }
+            ZStack {
+                AnimatedAppBackground()
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
                 
-                TaskListControlsView(viewModel: viewModel)
-                
-                Section("Tasks") {
-                    if visibleTasks.isEmpty {
-                        if tasks.isEmpty {
-                            EmptyStateView(
-                                systemImageName: emptyStateSystemImageName,
-                                title: emptyStateTitle,
-                                message: emptyStateMessage,
-                                actionTitle: "Create Task",
-                                action: {
-                                    viewModel.openCreateForm()
-                                }
+                List {
+                    Text("Kairo")
+                        .font(AppTheme.Typography.appName)
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .multilineTextAlignment(.center)
+                        .padding(.vertical, 6)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(
+                            EdgeInsets(
+                                top: 8,
+                                leading: 20,
+                                bottom: 8,
+                                trailing: 20
                             )
+                        )
+                    Section {
+                        StatisticsHeaderView(statistics: statistics)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
+                    
+                    TaskListControlsView(viewModel: viewModel)
+                    
+                    Section("Tasks") {
+                        if visibleTasks.isEmpty {
+                            if tasks.isEmpty {
+                                EmptyStateView(
+                                    systemImageName: emptyStateSystemImageName,
+                                    title: emptyStateTitle,
+                                    message: emptyStateMessage,
+                                    actionTitle: "Create Task",
+                                    action: {
+                                        viewModel.openCreateForm()
+                                    }
+                                )
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                            } else {
+                                EmptyStateView(
+                                    systemImageName: emptyStateSystemImageName,
+                                    title: emptyStateTitle,
+                                    message: emptyStateMessage
+                                )
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                            }
                         } else {
-                            EmptyStateView(
-                                systemImageName: emptyStateSystemImageName,
-                                title: emptyStateTitle,
-                                message: emptyStateMessage
-                            )
-                        }
-                    } else {
-                        ForEach(visibleTasks, id: \.id) { task in
-                            TaskCardView(
-                                task: task,
-                                onToggleCompleted: {
-                                    toggleTaskCompletion(task)
+                            ForEach(visibleTasks, id: \.id) { task in
+                                TaskCardView(
+                                    task: task,
+                                    onToggleCompleted: {
+                                        toggleTaskCompletion(task)
+                                    }
+                                )
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        deleteTask(task)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                    
+                                    Button {
+                                        viewModel.openEditForm(for: task)
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(AppTheme.accentSoft)
                                 }
-                            )
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    deleteTask(task)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-
-                                Button {
-                                    viewModel.openEditForm(for: task)
-                                } label: {
-                                    Label("Edit", systemImage: "pencil")
-                                }
-                                .tint(.blue)
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
                             }
                         }
                     }
                 }
-            }
-            .navigationTitle("Kairo")
-            .searchable(text: $viewModel.searchText, prompt: "Search tasks")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        viewModel.openCreateForm()
-                    } label: {
-                        Image(systemName: "plus")
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+                .navigationTitle("")
+                .navigationBarTitleDisplayMode(.inline)
+                .searchable(text: $viewModel.searchText, prompt: "Search tasks")
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            viewModel.openCreateForm()
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .tint(AppTheme.accentSoft)
+                        .accessibilityLabel("Add Task")
                     }
-                    .accessibilityLabel("Add Task")
                 }
-            }
-            .sheet(item: $viewModel.formRoute) { route in
-                switch route {
-                case .create:
-                    TaskFormView(
-                        navigationTitle: "New Task",
-                        onCancel: {
-                            viewModel.closeForm()
-                        },
-                        onSave: { formData in
-                            createTask(from: formData)
-                        }
-                    )
-                    
-                case .edit(let task):
-                    TaskFormView(
-                        navigationTitle: "Edit Task",
-                        initialData: TaskFormData(
-                            title: task.title,
-                            taskDescription: task.taskDescription,
-                            dueDate: task.dueDate,
-                            priority: task.priority,
-                            category: task.category
-                        ),
-                        onCancel: {
-                            viewModel.closeForm()
-                        },
-                        onSave: { formData in
-                            updateTask(task, with: formData)
-                        }
-                    )
+                .sheet(item: $viewModel.formRoute) { route in
+                    switch route {
+                    case .create:
+                        TaskFormView(
+                            navigationTitle: "New Task",
+                            onCancel: {
+                                viewModel.closeForm()
+                            },
+                            onSave: { formData in
+                                createTask(from: formData)
+                            }
+                        )
+                        
+                    case .edit(let task):
+                        TaskFormView(
+                            navigationTitle: "Edit Task",
+                            initialData: TaskFormData(
+                                title: task.title,
+                                taskDescription: task.taskDescription,
+                                dueDate: task.dueDate,
+                                priority: task.priority,
+                                category: task.category
+                            ),
+                            onCancel: {
+                                viewModel.closeForm()
+                            },
+                            onSave: { formData in
+                                updateTask(task, with: formData)
+                            }
+                        )
+                    }
                 }
             }
         }

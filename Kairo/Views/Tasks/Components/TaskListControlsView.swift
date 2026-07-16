@@ -18,6 +18,7 @@ struct TaskListControlsView: View {
                         .tag(filter)
                 }
             }
+            .listRowBackground(AppTheme.surface)
             
             if viewModel.selectedFilter == .priority {
                 Picker("Priority", selection: $viewModel.selectedPriority) {
@@ -26,6 +27,7 @@ struct TaskListControlsView: View {
                             .tag(priority)
                     }
                 }
+                .listRowBackground(AppTheme.surface)
             }
             
             Picker("Sort", selection: $viewModel.selectedSortOption) {
@@ -34,6 +36,7 @@ struct TaskListControlsView: View {
                         .tag(sortOption)
                 }
             }
+            .listRowBackground(AppTheme.surface)
         }
     }
 }
@@ -42,4 +45,6 @@ struct TaskListControlsView: View {
     List {
         TaskListControlsView(viewModel: TaskListViewModel())
     }
+    .scrollContentBackground(.hidden)
+    .background(AppTheme.background)
 }

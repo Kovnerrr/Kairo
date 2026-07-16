@@ -37,10 +37,10 @@ struct EmptyStateView: View {
             
             VStack(spacing: 6) {
                 Text(title)
-                    .font(.headline)
+                    .font(AppTheme.Typography.sectionTitle)
                 
                 Text(message)
-                    .font(.subheadline)
+                    .font(AppTheme.Typography.secondary)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -49,12 +49,22 @@ struct EmptyStateView: View {
                 Button(actionTitle) {
                     action()
                 }
+                .font(AppTheme.Typography.button)
                 .buttonStyle(.borderedProminent)
+                .tint(AppTheme.accent)
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
         .padding(.horizontal)
+        .background(
+            AppTheme.surface,
+            in: RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius)
+                .stroke(AppTheme.border, lineWidth: 1)
+        }
     }
 }
 
@@ -65,6 +75,7 @@ struct EmptyStateView: View {
         message: "Try changing your search text or filters."
     )
     .padding()
+    .background(AppTheme.background)
 }
 
 #Preview("With Action") {
@@ -76,4 +87,5 @@ struct EmptyStateView: View {
         action: {}
     )
     .padding()
+    .background(AppTheme.background)
 }

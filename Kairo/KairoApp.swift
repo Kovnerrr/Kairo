@@ -13,6 +13,8 @@ struct KairoApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .font(AppTheme.Typography.body)
+                .tint(AppTheme.accent)
         }
         // The model container makes TaskItem available to SwiftData
         // throughout the app`s SwiftUI hierarchy.

@@ -14,35 +14,54 @@ struct StatisticsHeaderView: View {
         Int((statistics.completionRate * 100).rounded())
     }
     
+    private let statisticColumns = Array(
+        repeating: GridItem(
+            .flexible(),
+            spacing: 0,
+            alignment: .center
+        ),
+        count: 3
+    )
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             header
             
             ProgressView(value: statistics.completionRate)
+                .tint(AppTheme.accent)
                 .accessibilityLabel("Completion progress")
                 .accessibilityValue("\(completionPercentage) percent")
             
-            HStack(spacing: 12) {
+            LazyVGrid(
+                columns: statisticColumns,
+                spacing: 0
+            ) {
                 statisticItem(title: "Total", value: statistics.total)
                 statisticItem(title: "Completed", value: statistics.completed)
                 statisticItem(title: "Pending", value: statistics.pending)
             }
+            .frame(maxWidth: .infinity)
         }
         .padding()
         .background(
-            Color.secondary.opacity(0.08),
-            in: RoundedRectangle(cornerRadius: 8)
+            AppTheme.surface,
+            in: RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius)
         )
+        .overlay {
+            RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius)
+                .stroke(AppTheme.border, lineWidth: 1)
+        }
     }
     
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Overview")
-                    .font(.headline)
+                    .font(AppTheme.Typography.sectionTitle)
+                    .fixedSize(horizontal: false, vertical: true)
                 
                 Text("Completion: \(completionPercentage)%")
-                    .font(.subheadline)
+                    .font(AppTheme.Typography.secondary)
                     .foregroundStyle(.secondary)
             }
             
@@ -55,17 +74,25 @@ struct StatisticsHeaderView: View {
         }
     }
     
-    private func statisticItem(title: String, value: Int) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+    private func statisticItem(
+        title: String,
+        value: Int
+    ) -> some View {
+        VStack(spacing: 4) {
             Text("\(value)")
-                .font(.title2)
-                .fontWeight(.bold)
-            
+                .font(AppTheme.Typography.statisticNumber)
+                .lineLimit(1)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(minHeight: 38)
+
             Text(title)
-                .font(.caption)
+                .font(AppTheme.Typography.secondary)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title): \(value)")
     }
@@ -76,6 +103,7 @@ struct StatisticsHeaderView: View {
         statistics: TaskStatistics(total: 0, completed: 0, pending: 0)
     )
     .padding()
+    .background(AppTheme.background)
 }
 
 #Preview("Partial") {
@@ -83,6 +111,7 @@ struct StatisticsHeaderView: View {
         statistics: TaskStatistics(total: 10, completed: 4, pending: 6)
     )
     .padding()
+    .background(AppTheme.background)
 }
 
 #Preview("Complete") {
@@ -90,4 +119,5 @@ struct StatisticsHeaderView: View {
         statistics: TaskStatistics(total: 8, completed: 8, pending: 0)
     )
     .padding()
+    .background(AppTheme.background)
 }
