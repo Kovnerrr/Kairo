@@ -11,24 +11,17 @@ struct AnimatedAppBackground: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     var body: some View {
-        if reduceMotion {
-            gradient
-                .scaleEffect(1.60)
-        } else {
-            gradient
-                .phaseAnimator([false, true]) { content, phase in
-                    content
-                        .scaleEffect(phase ? 1.65 : 1.55)
-                        .offset(
-                            x: phase ? 90 : -90,
-                            y: phase ? -65 : 65
-                        )
-                        .rotationEffect(
-                            .degrees(phase ? 4 : -4)
-                        )
-                } animation: { _ in
-                    .easeInOut(duration: 5)
-                }
+        TimelineView(
+            .animation(
+                minimumInterval: 1.0 / 30.0,
+                paused: reduceMotion
+            )
+        ) { context in
+            gradient(
+                at: reduceMotion
+                    ? 0
+                    : context.date.timeIntervalSinceReferenceDate
+            )
         }
     }
     
@@ -37,13 +30,16 @@ struct AnimatedAppBackground: View {
     private var colors: [Color] {
         [
             AppTheme.gradientTop, AppTheme.gradientTop, AppTheme.gradientMiddle,
-            AppTheme.gradientGreen, AppTheme.surface, AppTheme.gradientMiddle,
+            AppTheme.gradientGreen, AppTheme.gradientMiddle, AppTheme.gradientMiddle,
             AppTheme.gradientGreen, AppTheme.gradientGreen, AppTheme.gradientBottom
         ]
     }
     
-    private var gradient: some View {
-        MeshGradient(
+    private func gradient(at time: TimeInterval) -> some View {
+        let horizontalWave = Float(sin(time * 0.90))
+        let verticalWave = Float(cos(time * 0.70))
+
+        return MeshGradient(
             width: 3,
             height: 3,
             points: [
@@ -51,12 +47,15 @@ struct AnimatedAppBackground: View {
                 [0.5, 0],
                 [1, 0],
 
-                [0, 0.40],
-                [0.5, 0.55],
-                [1, 0.50],
+                [0, 0.26 + 0.10 * verticalWave],
+                [
+                    0.50 + 0.22 * horizontalWave,
+                    0.50 + 0.16 * verticalWave
+                ],
+                [1, 0.50 - 0.10 * verticalWave],
 
                 [0, 1],
-                [0.52, 1],
+                [0.52 - 0.12 * horizontalWave, 1],
                 [1, 1]
             ],
             colors: colors,

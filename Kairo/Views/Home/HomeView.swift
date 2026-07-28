@@ -73,6 +73,8 @@ struct HomeView: View {
         
         NavigationStack {
             ZStack {
+                AppTheme.background
+                    .ignoresSafeArea()
                 AnimatedAppBackground()
                     .ignoresSafeArea()
                     .accessibilityHidden(true)
