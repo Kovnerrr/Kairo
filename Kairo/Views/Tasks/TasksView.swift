@@ -1,5 +1,5 @@
 //
-//  HomeView.swift
+//  TasksView.swift
 //  Kairo
 //
 //  Created by Andrii Kovner on 22.06.26.
@@ -8,7 +8,7 @@
 import SwiftUI
 import SwiftData
 
-struct HomeView: View {
+struct TasksView: View {
     // MARK: - Data
     @Environment(\.modelContext) private var modelContext
     @Query private var tasks: [TaskItem]
@@ -241,7 +241,7 @@ struct HomeView: View {
 }
 
 #Preview {
-    HomeView()
+    TasksView()
         .modelContainer(PreviewContainer.container)
 }
 
