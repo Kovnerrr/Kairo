@@ -35,7 +35,7 @@ struct RootView: View {
             
             Tab(
                 "Tasks",
-                systemImage: "cheklist",
+                systemImage: "checklist",
                 value: .tasks
             ) {
                 TasksView()
