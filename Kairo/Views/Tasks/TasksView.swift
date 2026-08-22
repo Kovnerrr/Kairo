@@ -15,6 +15,7 @@ struct TasksView: View {
     
     // MARK: - State
     @State private var viewModel = TaskListViewModel()
+    @State private var isFilterSheetPresented = false
     
     // MARK: - Computed Properties
     private var trimmedSearchText: String {
@@ -102,8 +103,6 @@ struct TasksView: View {
                             .listRowSeparator(.hidden)
                     }
                     
-                    TaskListControlsView(viewModel: viewModel)
-                    
                     Section("Tasks") {
                         if visibleTasks.isEmpty {
                             if tasks.isEmpty {
@@ -161,7 +160,30 @@ struct TasksView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .searchable(text: $viewModel.searchText, prompt: "Search tasks")
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        Button {
+                            isFilterSheetPresented = true
+                        } label: {
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: "line.3.horizontal.decrease")
+
+                                if viewModel.hasActiveTaskControls {
+                                    Circle()
+                                        .fill(AppTheme.accentSoft)
+                                        .frame(width: 7, height: 7)
+                                        .offset(x: 3, y: -3)
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                        }
+                        .tint(AppTheme.accentSoft)
+                        .accessibilityLabel("Filter and sort tasks")
+                        .accessibilityValue(
+                            viewModel.hasActiveTaskControls
+                                ? "Filters active"
+                                : "Default settings"
+                        )
+
                         Button {
                             viewModel.openCreateForm()
                         } label: {
@@ -171,6 +193,11 @@ struct TasksView: View {
                         .accessibilityLabel("Add Task")
                     }
                 }
+                .sheet(isPresented: $isFilterSheetPresented) {
+                    TaskFilterSheetView(viewModel: viewModel)
+                        .presentationDetents([.medium, .large])
+                }
+                
                 .sheet(item: $viewModel.formRoute) { route in
                     switch route {
                     case .create:
@@ -183,7 +210,7 @@ struct TasksView: View {
                                 createTask(from: formData)
                             }
                         )
-                        
+
                     case .edit(let task):
                         TaskFormView(
                             navigationTitle: "Edit Task",

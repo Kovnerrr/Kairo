@@ -11,12 +11,28 @@ import Observation
 @MainActor
 @Observable
 final class TaskListViewModel {
+    // MARK: - Defaults
+    private enum DefaultControls {
+        static let filter: TaskFilter = .all
+        static let sortOption: TaskSortOption = .dueDateAscending
+        static let priority: TaskPriority = .high
+    }
     
     // MARK: - List State
     var searchText: String = ""
-    var selectedFilter: TaskFilter = .all
-    var selectedSortOption: TaskSortOption = .dueDateAscending
-    var selectedPriority: TaskPriority = .high
+    var selectedFilter = DefaultControls.filter
+    var selectedSortOption = DefaultControls.sortOption
+    var selectedPriority = DefaultControls.priority
+    
+    // MARK: - Control State
+    var hasActiveTaskControls: Bool {
+        selectedFilter != DefaultControls.filter ||
+        selectedSortOption != DefaultControls.sortOption ||
+        (
+            selectedFilter == .priority && selectedPriority != DefaultControls.priority
+        )
+        
+    }
     
     // MARK: - Form Presentation
     var formRoute: TaskFormRoute?
@@ -37,6 +53,13 @@ final class TaskListViewModel {
     // MARK: - Search
     func clearSearch() {
         searchText = ""
+    }
+    
+    // MARK: - Control Actions
+    func resetControls() {
+        selectedFilter = DefaultControls.filter
+        selectedSortOption = DefaultControls.sortOption
+        selectedPriority = DefaultControls.priority
     }
     
     // MARK: - Task Processing
