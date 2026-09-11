@@ -16,8 +16,8 @@ struct KairoApp: App {
                 .font(AppTheme.Typography.body)
                 .tint(AppTheme.accent)
         }
-        // The model container makes TaskItem available to SwiftData
+        // The model container makes SwiftData models available
         // throughout the app`s SwiftUI hierarchy.
-        .modelContainer(for: TaskItem.self)
+        .modelContainer(for: [TaskItem.self, DailyMood.self])
     }
 }

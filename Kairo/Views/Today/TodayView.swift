@@ -7,13 +7,51 @@
 
 import SwiftUI
 import SwiftData
+import Foundation
 
 struct TodayView: View {
     // MARK: - Data
     
     @Query private var tasks: [TaskItem]
+    @Query private var moods: [DailyMood]
+    
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+    
+    @State private var moodSaveErrorMessage: String?
+    @State private var currentDate = Date.now
     
     // MARK: - Computed Properties
+    
+    private var todayDayKey: String {
+        dayKey(for: currentDate)
+    }
+    
+    private func dayKey(for date: Date) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let components = calendar.dateComponents(
+            [.year, .month, .day],
+            from: date
+        )
+        
+        let year = components.year ?? 0
+        let month = components.month ?? 0
+        let day = components.day ?? 0
+        
+        return String(
+            format: "%04d-%02d-%02d",
+            year,
+            month,
+            day
+        )
+    }
+    
+    private var todayMood: DailyMood? {
+        moods.first { mood in
+            mood.dayKey == todayDayKey
+        }
+    }
     
     private var todayTasks: [TaskItem] {
         let calendar = Calendar.current
@@ -71,6 +109,51 @@ struct TodayView: View {
     private func toggleTaskCompletion(_ task: TaskItem) {
         task.isCompleted.toggle()
         task.completedAt = task.isCompleted ? .now : nil
+    }
+    
+    private func selectMood(_ mood: MoodType) {
+        let now = Date.now
+        currentDate = now
+
+        let currentDayKey = dayKey(for: now)
+
+        if let existingMood = moods.first(where: {
+            $0.dayKey == currentDayKey
+        }) {
+            guard existingMood.mood != mood else {
+                return
+            }
+
+            let previousRawValue = existingMood.moodRawValue
+            let previousUpdatedAt = existingMood.updatedAt
+
+            existingMood.mood = mood
+            existingMood.updatedAt = now
+
+            do {
+                try modelContext.save()
+            } catch {
+                existingMood.moodRawValue = previousRawValue
+                existingMood.updatedAt = previousUpdatedAt
+                moodSaveErrorMessage = error.localizedDescription
+            }
+        } else {
+            let newMood = DailyMood(
+                dayKey: currentDayKey,
+                mood: mood,
+                createdAt: now,
+                updatedAt: now
+            )
+
+            modelContext.insert(newMood)
+
+            do {
+                try modelContext.save()
+            } catch {
+                modelContext.delete(newMood)
+                moodSaveErrorMessage = error.localizedDescription
+            }
+        }
     }
     
     // MARK: - Body
@@ -176,33 +259,15 @@ struct TodayView: View {
                                 .font(AppTheme.Typography.sectionTitle)
                                 .foregroundStyle(.primary)
                             
-                            HStack(spacing: 12) {
-                                Image(systemName: "face.smiling")
-                                    .font(.title2)
-                                    .foregroundStyle(AppTheme.accent)
-                                    .accessibilityHidden(true)
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("How are you feeling today?")
-                                        .font(AppTheme.Typography.cardTitle)
-                                        .foregroundStyle(.primary)
-                                    
-                                    Text("Mood tracking is coming soon")
-                                        .font(AppTheme.Typography.secondary)
-                                        .foregroundStyle(.secondary)
+                            Text("How are you feeling today?")
+                                .font(AppTheme.Typography.secondary)
+                                .foregroundStyle(.secondary)
+                            
+                            MoodPickerView(
+                                selectedMood: todayMood?.mood, onSelectMood: { mood in
+                                    selectMood(mood)
                                 }
-                                
-                                Spacer(minLength: 0)
-                            }
-                            .padding()
-                            .background(AppTheme.surface)
-                            .clipShape(
-                                RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius)
                             )
-                            .overlay {
-                                RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius)
-                                    .stroke(AppTheme.border, lineWidth: 1)
-                            }
                         }
                         
                         // Journal
@@ -245,6 +310,43 @@ struct TodayView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                currentDate = .now
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    currentDate = .now
+                }
+            }
+            .task {
+                for await _ in NotificationCenter.default.messages(
+                    of: Calendar.self,
+                    for: .calendarDayChanged
+                ) {
+                    currentDate = .now
+                }
+            }
+            .alert(
+                "Couldn't Save Mood",
+                isPresented: Binding(
+                    get: {
+                        moodSaveErrorMessage != nil
+                    },
+                    set: { isPresented in
+                        if !isPresented {
+                            moodSaveErrorMessage = nil
+                        }
+                    }
+                )
+            ) {
+                Button("OK", role: .cancel) {
+                    moodSaveErrorMessage = nil
+                }
+            } message: {
+                Text(
+                    moodSaveErrorMessage ?? "An unknown error occurred."
+                )
+            }
         }
     }
 }

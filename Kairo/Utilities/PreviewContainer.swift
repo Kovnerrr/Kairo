@@ -14,7 +14,11 @@ enum PreviewContainer {
         do {
             let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
             
-            let container = try ModelContainer(for: TaskItem.self, configurations: configuration)
+            let container = try ModelContainer(
+                for: TaskItem.self,
+                DailyMood.self,
+                configurations: configuration
+            )
             
             SampleData.tasks.forEach { task in container.mainContext.insert(task) }
             
