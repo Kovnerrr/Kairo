@@ -67,3 +67,35 @@ struct TodayTaskRow: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Active") {
+    TodayTaskRow(
+        task: TaskItem(
+            title: "Review today's plan",
+            dueDate: .now,
+            priority: .high,
+            category: .work
+        ),
+        onToggleCompleted: {}
+    )
+    .padding()
+    .background(AppTheme.background)
+}
+
+#Preview("Completed") {
+    TodayTaskRow(
+        task: TaskItem(
+            title: "Finish the SwiftUI lesson",
+            dueDate: .now,
+            priority: .medium,
+            category: .study,
+            isCompleted: true,
+            completedAt: .now
+        ),
+        onToggleCompleted: {}
+    )
+    .padding()
+    .background(AppTheme.background)
+}

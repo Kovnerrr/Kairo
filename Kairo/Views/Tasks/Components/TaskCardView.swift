@@ -59,6 +59,8 @@ struct TaskCardView: View {
                 } label: {
                     Image(systemName: completionButtonImageName)
                         .font(.title3)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(completionButtonAccessibilityLabel)
