@@ -14,9 +14,12 @@ struct TodayView: View {
     
     @Query private var tasks: [TaskItem]
     @Query private var moods: [DailyMood]
+    @Query private var journalEntries: [JournalEntry]
     
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    
+    // MARK: - State
     
     @State private var moodSaveErrorMessage: String?
     @State private var currentDate = Date.now
@@ -53,12 +56,27 @@ struct TodayView: View {
         }
     }
     
+    private var latestTodayJournalEntry: JournalEntry? {
+        let calendar = Calendar.current
+        
+        return journalEntries
+            .filter { entry in
+                calendar.isDate(entry.entryDate, inSameDayAs: currentDate)
+            }
+            .max { firstEntry, secondEntry in
+                firstEntry.createdAt < secondEntry.createdAt
+            }
+    }
+    
     private var todayTasks: [TaskItem] {
         let calendar = Calendar.current
         
         return tasks
             .filter { task in
-                calendar.isDateInToday(task.dueDate)
+                calendar.isDate(
+                    task.dueDate,
+                    inSameDayAs: currentDate
+                )
             }
             .sorted { firstTask, secondTask in
                 if firstTask.isCompleted != secondTask.isCompleted {
@@ -90,7 +108,7 @@ struct TodayView: View {
     }
     
     private var greeting: String {
-        let hour = Calendar.current.component(.hour, from: .now)
+        let hour = Calendar.current.component(.hour, from: currentDate)
         
         switch hour {
         case 5..<12:
@@ -171,7 +189,7 @@ struct TodayView: View {
                                 .foregroundStyle(.primary)
                             
                             Text(
-                                Date.now,
+                                currentDate,
                                 format: .dateTime
                                     .weekday(.wide)
                                     .month(.wide)
@@ -264,7 +282,8 @@ struct TodayView: View {
                                 .foregroundStyle(.secondary)
                             
                             MoodPickerView(
-                                selectedMood: todayMood?.mood, onSelectMood: { mood in
+                                selectedMood: todayMood?.mood,
+                                onSelectMood: { mood in
                                     selectMood(mood)
                                 }
                             )
@@ -277,30 +296,33 @@ struct TodayView: View {
                                 .font(AppTheme.Typography.sectionTitle)
                                 .foregroundStyle(.primary)
                             
-                            HStack(spacing: 12) {
-                                Image(systemName: "book.closed")
-                                    .font(.title2)
-                                    .foregroundStyle(AppTheme.accent)
-                                    .accessibilityHidden(true)
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Capture your day")
-                                        .font(AppTheme.Typography.cardTitle)
-                                        .foregroundStyle(.primary)
+                            if let entry = latestTodayJournalEntry {
+                                NavigationLink {
+                                    JournalEntryDetailView(entry: entry)
+                                } label: {
+                                    JournalEntryCardView(entry: entry)
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "book.closed")
+                                        .font(.title2)
+                                        .foregroundStyle(AppTheme.accent)
+                                        .accessibilityHidden(true)
                                     
-                                    Text("Journal entries are coming soon")
+                                    Text("No journal entries today")
                                         .font(AppTheme.Typography.secondary)
                                         .foregroundStyle(.secondary)
+                                    
+                                    Spacer(minLength: 0)
                                 }
-                                
-                                Spacer(minLength: 0)
-                            }
-                            .padding()
-                            .background(AppTheme.surface)
-                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius)
-                                    .stroke(AppTheme.border, lineWidth: 1)
+                                .padding()
+                                .background(AppTheme.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius)
+                                        .stroke(AppTheme.border, lineWidth: 1)
+                                }
                             }
                         }
                     }
@@ -351,7 +373,50 @@ struct TodayView: View {
     }
 }
 
-#Preview {
+// MARK: - Previews
+
+#Preview("Empty") {
     TodayView()
-        .modelContainer(PreviewContainer.container)
+        .modelContainer(
+            PreviewContainer.make(
+                tasks: [],
+                journalEntries: []
+            )
+        )
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+}
+
+#Preview("Partial") {
+    let tasks = SampleData.tasks
+    let now = Date.now
+
+    tasks.forEach { task in
+        task.dueDate = now
+    }
+
+    let container = PreviewContainer.make(tasks: tasks)
+
+    return TodayView()
+        .modelContainer(container)
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+}
+
+#Preview("Complete") {
+    let tasks = SampleData.tasks
+    let now = Date.now
+
+    tasks.forEach { task in
+        task.dueDate = now
+        task.isCompleted = true
+        task.completedAt = now
+    }
+
+    let container = PreviewContainer.make(tasks: tasks)
+
+    return TodayView()
+        .modelContainer(container)
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
 }

@@ -18,6 +18,6 @@ struct KairoApp: App {
         }
         // The model container makes SwiftData models available
         // throughout the app`s SwiftUI hierarchy.
-        .modelContainer(for: [TaskItem.self, DailyMood.self])
+        .modelContainer(for: [TaskItem.self, DailyMood.self, JournalEntry.self])
     }
 }

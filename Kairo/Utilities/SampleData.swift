@@ -7,8 +7,10 @@
 
 import Foundation
 
-///Provides sample tasks for previews and development.
+/// Provides sample data for previews and development.
 enum SampleData {
+    // MARK: - Tasks
+    
     static var tasks: [TaskItem] {
         [
             TaskItem(
@@ -40,6 +42,67 @@ enum SampleData {
                 category: .study,
                 isCompleted: true,
                 completedAt: .now
+            )
+        ]
+    }
+    
+    // MARK: - Journal Entries
+    
+    static var journalEntries: [JournalEntry] {
+        let calendar = Calendar.current
+        let now = Date.now
+        
+        return [
+            JournalEntry(
+                title: "A productive day",
+                bodyText: """
+                    Today I spent some time learning Swift and German.
+                    I finally understood a few things that had been confusing me before.
+                    There is still a lot to learn, but the project is moving forward.
+                    """,
+                entryDate: now,
+                createdAt: now,
+                updatedAt: now
+            ),
+            
+            JournalEntry(
+                title: "Evening walk",
+                bodyText: """
+                    We went for a walk in the evening. The weather was calm, and it was nice.
+                    """,
+                entryDate: now,
+                createdAt: calendar.date(
+                    byAdding: .hour,
+                    value: -2,
+                    to: now
+                ) ?? now,
+                updatedAt: calendar.date(
+                    byAdding: .hour,
+                    value: -2,
+                    to: now
+                ) ?? now
+            ),
+            
+            JournalEntry(
+                title: "Yesterday",
+                bodyText: """
+                    Yesterday was a quieter day. I studied a little, rested, and slept well.
+                    """,
+                entryDate: calendar.date(
+                    byAdding: .day,
+                    value: -1,
+                    to: now
+                ) ?? now,
+                createdAt: calendar.date(
+                    byAdding: .day,
+                    value: -1,
+                    to: now
+                ) ?? now,
+                updatedAt: calendar.date(
+                    byAdding: .day,
+                    value: -1,
+                    to: now
+                ) ?? now
             )
         ]
     }
