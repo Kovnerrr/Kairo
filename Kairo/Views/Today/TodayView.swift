@@ -181,6 +181,10 @@ struct TodayView: View {
             ZStack {
                 AppTheme.background
                     .ignoresSafeArea()
+                
+                AnimatedAppBackground()
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 20) {
                         VStack(alignment: .leading, spacing: 4) {

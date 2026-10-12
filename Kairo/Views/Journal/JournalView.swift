@@ -29,7 +29,14 @@ struct JournalView: View {
     
     var body: some View {
         NavigationStack {
-            Group {
+            ZStack {
+                AppTheme.background
+                    .ignoresSafeArea()
+
+                AnimatedAppBackground()
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
+
                 if entries.isEmpty {
                     EmptyStateView(
                         systemImageName: "book.closed",
@@ -63,6 +70,8 @@ struct JournalView: View {
                         }
                     }
                     .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
                 }
             }
             .navigationTitle("Journal")

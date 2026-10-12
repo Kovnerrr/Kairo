@@ -15,7 +15,11 @@ struct CalendarView: View {
             ZStack {
                 AppTheme.background
                     .ignoresSafeArea()
-                
+
+                AnimatedAppBackground()
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
+
                 ContentUnavailableView(
                     "Calendar",
                     systemImage: "calendar",
