@@ -27,27 +27,7 @@ struct TodayView: View {
     // MARK: - Computed Properties
     
     private var todayDayKey: String {
-        dayKey(for: currentDate)
-    }
-    
-    private func dayKey(for date: Date) -> String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .current
-        let components = calendar.dateComponents(
-            [.year, .month, .day],
-            from: date
-        )
-        
-        let year = components.year ?? 0
-        let month = components.month ?? 0
-        let day = components.day ?? 0
-        
-        return String(
-            format: "%04d-%02d-%02d",
-            year,
-            month,
-            day
-        )
+        MoodDayKey.make(for: currentDate)
     }
     
     private var todayMood: DailyMood? {
@@ -133,7 +113,7 @@ struct TodayView: View {
         let now = Date.now
         currentDate = now
 
-        let currentDayKey = dayKey(for: now)
+        let currentDayKey = MoodDayKey.make(for: now)
 
         if let existingMood = moods.first(where: {
             $0.dayKey == currentDayKey
