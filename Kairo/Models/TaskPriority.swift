@@ -7,7 +7,7 @@
 
 import Foundation
 
-///Describe how important a task is.
+/// Describes how important a task is.
 enum TaskPriority: String, CaseIterable, Identifiable, Codable {
     case low
     case medium

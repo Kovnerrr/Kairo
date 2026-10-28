@@ -14,9 +14,13 @@ enum MoodType: String, CaseIterable, Identifiable {
     case low
     case bad
     
+    // MARK: - Identifiable
+    
     var id: String {
         rawValue
     }
+    
+    // MARK: - Display
     
     var title: String {
         switch self {

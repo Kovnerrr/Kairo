@@ -7,7 +7,7 @@
 
 import Foundation
 
-///Describe the life area a task belongs to.
+/// Describes the life area a task belongs to.
 enum TaskCategory: String, CaseIterable, Identifiable, Codable {
     case personal
     case work

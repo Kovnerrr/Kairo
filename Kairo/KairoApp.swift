@@ -10,14 +10,19 @@ import SwiftData
 
 @main
 struct KairoApp: App {
+    
+    // MARK: - Body
+    
     var body: some Scene {
         WindowGroup {
             RootView()
                 .font(AppTheme.Typography.body)
                 .tint(AppTheme.accent)
         }
+        
         // The model container makes SwiftData models available
-        // throughout the app`s SwiftUI hierarchy.
+        // throughout the app's SwiftUI hierarchy.
+        
         .modelContainer(for: [TaskItem.self, DailyMood.self, JournalEntry.self])
     }
 }

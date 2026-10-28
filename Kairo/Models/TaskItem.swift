@@ -8,36 +8,36 @@
 import Foundation
 import SwiftData
 
-/// A persisted task entity stored locally with SwiftData
+/// A persisted task entity stored locally with SwiftData.
 @Model
 final class TaskItem {
     // MARK: - Stored Properties
     
-    /// A stable unique identifier for the task
+    /// A stable unique identifier for the task.
     @Attribute(.unique) var id: UUID
     
-    /// Main task title show in the last list.
+    /// The task title displayed in lists and detail views.
     var title: String
     
-    /// Optional longer text with additional task details
+    /// Optional longer text with additional task details.
     var taskDescription: String?
     
-    /// Date when the task should be completed
+    /// Date when the task should be completed.
     var dueDate: Date
     
-    /// Stores the task priority as a raw string value for SwiftData persistence
+    /// Stores the task priority as a raw string value for SwiftData persistence.
     var priorityRaw: String
     
-    /// Stores the task category as a raw string value for SwiftData persistence
+    /// Stores the task category as a raw string value for SwiftData persistence.
     var categoryRaw: String
     
-    /// Indicates whether the task is completed
+    /// Indicates whether the task is completed.
     var isCompleted: Bool
     
-    /// Date when the task was created
+    /// Date when the task was created.
     var createdAt: Date
     
-    /// Date when the task was completed. Nil means that the task is still active
+    /// Date when the task was completed. Nil means that the task is still active.
     var completedAt: Date?
     
     // MARK: - Computed Properties

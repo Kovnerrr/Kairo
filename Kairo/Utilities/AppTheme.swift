@@ -6,9 +6,11 @@
 //
 
 import SwiftUI
-// MARK: - Colors
 
 enum AppTheme {
+    
+    // MARK: - Colors
+    
     static let background = Color("KairoBackground")
     static let surface = Color("KairoSurface")
     static let accent = Color("KairoAccent")
@@ -31,7 +33,11 @@ enum AppTheme {
         private static let mediumFontName = "Comfortaa-Medium"
         private static let semiboldFontName = "Comfortaa-SemiBold"
         private static let boldFontName = "Comfortaa-Bold"
-        
+        static let detailTitle = Font.custom(
+                    boldFontName,
+                    size: 28,
+                    relativeTo: .title
+                )
         static let sectionTitle = Font.custom(semiboldFontName, size: 18, relativeTo: .headline)
         static let cardTitle = Font.custom(semiboldFontName, size: 16, relativeTo: .headline)
         static let body = Font.custom(regularFontName, size: 16, relativeTo: .body)

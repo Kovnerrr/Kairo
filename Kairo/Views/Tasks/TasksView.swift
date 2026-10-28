@@ -7,15 +7,20 @@
 
 import SwiftUI
 import SwiftData
+import Foundation
 
 struct TasksView: View {
     // MARK: - Data
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+    
     @Query private var tasks: [TaskItem]
     
     // MARK: - State
     @State private var viewModel = TaskListViewModel()
     @State private var isFilterSheetPresented = false
+    @State private var currentDate = Date.now
+    @State private var taskToOpenID: UUID?
     
     // MARK: - Computed Properties
     private var trimmedSearchText: String {
@@ -130,8 +135,12 @@ struct TasksView: View {
                             ForEach(visibleTasks, id: \.id) { task in
                                 TaskCardView(
                                     task: task,
+                                    referenceDate: currentDate,
                                     onToggleCompleted: {
                                         toggleTaskCompletion(task)
+                                    },
+                                    onOpenDetails: {
+                                        taskToOpenID = task.id
                                     }
                                 )
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -156,9 +165,50 @@ struct TasksView: View {
                 }
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
+                .onAppear {
+                    currentDate = .now
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        currentDate = .now
+                    }
+                }
+                .task {
+                    for await _ in NotificationCenter.default.messages(
+                        of: Calendar.self,
+                        for: .calendarDayChanged
+                    ) {
+                        currentDate = .now
+                    }
+                }
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
-                .searchable(text: $viewModel.searchText, prompt: "Search tasks")
+                .searchable(
+                    text: $viewModel.searchText,
+                    prompt: "Search tasks"
+                )
+                .navigationDestination(item: $taskToOpenID) { taskID in
+                    if let task = tasks.first(where: { $0.id == taskID }) {
+                        TaskDetailView(task: task)
+                    } else {
+                        ContentUnavailableView(
+                            "Task Unavailable",
+                            systemImage: "checklist",
+                            description: Text(
+                                "This task is no longer available."
+                            )
+                        )
+                    }
+                }
+                .onChange(of: tasks.map(\.id)) { _, existingTaskIDs in
+                    guard let openedTaskID = taskToOpenID else {
+                        return
+                    }
+
+                    if !existingTaskIDs.contains(openedTaskID) {
+                        taskToOpenID = nil
+                    }
+                }
                 .toolbar {
                     ToolbarItemGroup(placement: .topBarTrailing) {
                         Button {
@@ -166,7 +216,7 @@ struct TasksView: View {
                         } label: {
                             ZStack(alignment: .topTrailing) {
                                 Image(systemName: "line.3.horizontal.decrease")
-
+                                
                                 if viewModel.hasActiveTaskControls {
                                     Circle()
                                         .fill(AppTheme.accentSoft)
@@ -176,20 +226,20 @@ struct TasksView: View {
                                 }
                             }
                         }
-                        .tint(AppTheme.accentSoft)
+                        .tint(AppTheme.accent)
                         .accessibilityLabel("Filter and sort tasks")
                         .accessibilityValue(
                             viewModel.hasActiveTaskControls
-                                ? "Filters active"
-                                : "Default settings"
+                            ? "Filters active"
+                            : "Default settings"
                         )
-
+                        
                         Button {
                             viewModel.openCreateForm()
                         } label: {
                             Image(systemName: "plus")
                         }
-                        .tint(AppTheme.accentSoft)
+                        .tint(AppTheme.accent)
                         .accessibilityLabel("Add Task")
                     }
                 }
@@ -210,7 +260,7 @@ struct TasksView: View {
                                 createTask(from: formData)
                             }
                         )
-
+                        
                     case .edit(let task):
                         TaskFormView(
                             navigationTitle: "Edit Task",
@@ -234,7 +284,7 @@ struct TasksView: View {
         }
     }
     
-    // MARK: - Private Methods
+    // MARK: - Actions
     private func createTask(from formData: TaskFormData) {
         let task = TaskItem(
             title: formData.title,
@@ -267,8 +317,29 @@ struct TasksView: View {
     }
 }
 
-#Preview {
+// MARK: - Previews
+
+#Preview("Tasks") {
     TasksView()
         .modelContainer(PreviewContainer.container)
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+}
+
+#Preview("Tasks - Long Text / Large Type") {
+    let tasks = SampleData.tasks
+    tasks[0].title =
+        "Prepare a detailed review of the Calendar module and write down the next steps"
+
+    let container = PreviewContainer.make(
+        tasks: tasks,
+        journalEntries: []
+    )
+
+    return TasksView()
+        .modelContainer(container)
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+        .dynamicTypeSize(.accessibility3)
 }
 

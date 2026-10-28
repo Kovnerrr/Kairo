@@ -31,8 +31,8 @@ struct TodayTaskRow: View {
             .buttonStyle(.plain)
             .accessibilityLabel(
                 task.isCompleted
-                    ? "Mark as active"
-                    : "Mark as completed"
+                    ? "Mark \(task.title) as active"
+                    : "Mark \(task.title) as completed"
             )
             
             VStack(alignment: .leading, spacing: 4) {

@@ -38,25 +38,37 @@ struct JournalEntryFormView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Entry") {
-                    TextField(
-                        "Title",
-                        text: $formData.title
-                    )
-                    
-                    DatePicker(
-                        "Date",
-                        selection: $formData.entryDate,
-                        displayedComponents: .date
-                    )
-                }
+            ZStack {
+                AppTheme.background
+                    .ignoresSafeArea()
                 
-                Section("Notes") {
-                    TextEditor(text: $formData.bodyText)
-                        .frame(minHeight: 180)
-                        .accessibilityLabel("Journal entry text")
+                AnimatedAppBackground()
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
+                
+                Form {
+                    Section("Entry") {
+                        TextField(
+                            "Title",
+                            text: $formData.title
+                        )
+                        
+                        DatePicker(
+                            "Date",
+                            selection: $formData.entryDate,
+                            displayedComponents: .date
+                        )
+                    }
+                    .listRowBackground(AppTheme.surface)
+                    
+                    Section("Notes") {
+                        TextEditor(text: $formData.bodyText)
+                            .frame(minHeight: 180)
+                            .accessibilityLabel("Journal entry text")
+                    }
+                    .listRowBackground(AppTheme.surface)
                 }
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)

@@ -8,7 +8,12 @@
 import SwiftUI
 
 struct AnimatedAppBackground: View {
+    
+    // MARK: - Environment
+    
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    
+    // MARK: - Body
     
     var body: some View {
         TimelineView(
@@ -65,6 +70,8 @@ struct AnimatedAppBackground: View {
         )
     }
 }
+
+// MARK: - Previews
 
 #Preview {
     AnimatedAppBackground()

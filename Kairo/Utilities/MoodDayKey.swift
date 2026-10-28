@@ -7,6 +7,7 @@
 
 import Foundation
 
+/// Builds a Gregorian day key using the current time zone.
 enum MoodDayKey {
     static func make(for date: Date) -> String {
         var calendar = Calendar(identifier: .gregorian)

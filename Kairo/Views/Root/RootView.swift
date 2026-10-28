@@ -8,8 +8,7 @@
 import SwiftUI
 import SwiftData
 
-/// The first view of the app.
-/// Later, this view will decide whether to show onboarding or the main home screen.
+/// Hosts the main tabs of the app.
 struct RootView: View {
     // MARK: - Types
     private enum AppTab: Hashable {
@@ -60,7 +59,11 @@ struct RootView: View {
     }
 }
 
-#Preview {
+// MARK: - Previews
+
+#Preview("Main Tabs") {
     RootView()
         .modelContainer(PreviewContainer.container)
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
 }

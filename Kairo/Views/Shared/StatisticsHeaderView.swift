@@ -8,12 +8,10 @@
 import SwiftUI
 
 struct StatisticsHeaderView: View {
+    
+    // MARK: - Properties
+    
     let statistics: TaskStatistics
-    
-    private var completionPercentage: Int {
-        Int((statistics.completionRate * 100).rounded())
-    }
-    
     private let statisticColumns = Array(
         repeating: GridItem(
             .flexible(),
@@ -22,6 +20,14 @@ struct StatisticsHeaderView: View {
         ),
         count: 3
     )
+    
+    // MARK: - Computed Properties
+    
+    private var completionPercentage: Int {
+        Int((statistics.completionRate * 100).rounded())
+    }
+
+    // MARK: - Body
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -53,6 +59,8 @@ struct StatisticsHeaderView: View {
         }
     }
     
+    // MARK: - Subviews
+    
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
@@ -73,6 +81,8 @@ struct StatisticsHeaderView: View {
                 .accessibilityHidden(true)
         }
     }
+    
+    // MARK: - Helpers
     
     private func statisticItem(
         title: String,
@@ -98,6 +108,7 @@ struct StatisticsHeaderView: View {
     }
 }
 
+// MARK: - Previews
 #Preview("Empty") {
     StatisticsHeaderView(
         statistics: TaskStatistics(total: 0, completed: 0, pending: 0)

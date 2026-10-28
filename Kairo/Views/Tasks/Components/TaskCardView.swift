@@ -8,29 +8,51 @@
 import SwiftUI
 
 struct TaskCardView: View {
+    
+    // MARK: - Properties
+    
     let task: TaskItem
+    let referenceDate: Date
     let onToggleCompleted: () -> Void
+    let onOpenDetails: () -> Void
+    
+    // MARK: - Computed Properties
     
     private var isOverdue: Bool {
-        guard !task.isCompleted else { return false }
-        return Calendar.current
-            .startOfDay(for: task.dueDate) < Calendar.current.startOfDay(for: .now)
+        guard !task.isCompleted else {
+            return false
+        }
+
+        let calendar = Calendar.current
+
+        return calendar.startOfDay(for: task.dueDate)
+            < calendar.startOfDay(for: referenceDate)
     }
-    
+
     private var dueDateText: String {
+        let calendar = Calendar.current
+
         if isOverdue {
             return "Overdue"
         }
-        
-        if Calendar.current.isDateInToday(task.dueDate) {
+
+        if calendar.isDate(task.dueDate, inSameDayAs: referenceDate) {
             return "Today"
         }
-        
-        if Calendar.current.isDateInTomorrow(task.dueDate) {
+
+        if let tomorrow = calendar.date(
+            byAdding: .day,
+            value: 1,
+            to: calendar.startOfDay(for: referenceDate)
+        ),
+           calendar.isDate(task.dueDate, inSameDayAs: tomorrow) {
             return "Tomorrow"
         }
-        
-        return task.dueDate.formatted(date: .abbreviated, time: .omitted)
+
+        return task.dueDate.formatted(
+            date: .abbreviated,
+            time: .omitted
+        )
     }
     
     private var dueDateSystemImageName: String {
@@ -48,61 +70,80 @@ struct TaskCardView: View {
     }
     
     private var completionButtonAccessibilityLabel: String {
-        task.isCompleted ? "Mark as active" : "Mark as completed"
+        task.isCompleted ? "Mark \(task.title) as active" : "Mark \(task.title) as completed"
     }
     
+    // MARK: - Body
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 8) {
-                Button {
-                    onToggleCompleted()
-                } label: {
-                    Image(systemName: completionButtonImageName)
-                        .font(.title3)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(completionButtonAccessibilityLabel)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(task.title)
-                        .font(AppTheme.Typography.cardTitle)
-                        .strikethrough(task.isCompleted)
-                    
-                    if let description = task.taskDescription,
-                       !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text(description)
-                            .font(AppTheme.Typography.secondary)
+        HStack(alignment: .top, spacing: 8) {
+            Button {
+                onToggleCompleted()
+            } label: {
+                Image(systemName: completionButtonImageName)
+                    .foregroundStyle(
+                        task.isCompleted ? AppTheme.accent : .secondary
+                    )
+                    .font(.title3)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(completionButtonAccessibilityLabel)
+
+            Button {
+                onOpenDetails()
+            } label: {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(task.title)
+                                .font(AppTheme.Typography.cardTitle)
+                                .strikethrough(task.isCompleted)
+
+                            if let description = task.taskDescription,
+                               !description.trimmingCharacters(
+                                   in: .whitespacesAndNewlines
+                               ).isEmpty {
+                                Text(description)
+                                    .font(AppTheme.Typography.secondary)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                        }
+
+                        Spacer(minLength: 8)
+
+                        Text(statusTitle)
+                            .font(AppTheme.Typography.badge)
                             .foregroundStyle(.secondary)
-                            .lineLimit(2)
+                    }
+
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 8) {
+                            taskMetadata
+                        }
+                        .fixedSize(horizontal: true, vertical: false)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            taskMetadata
+                        }
                     }
                 }
-                
-                Spacer()
-                
-                Text(statusTitle)
-                    .font(AppTheme.Typography.badge)
-                    .foregroundStyle(.secondary)
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: 44,
+                    alignment: .leading
+                )
+                .foregroundStyle(.primary)
+                .contentShape(Rectangle())
             }
-            
-            HStack(spacing: 8) {
-                metadataBadge(
-                    title: task.category.title,
-                    systemImageName: task.category.systemImageName
-                )
-                
-                metadataBadge(
-                    title: task.priority.title,
-                    systemImageName: task.priority.systemImageName
-                )
-                
-                metadataBadge(
-                    title: dueDateText,
-                    systemImageName: dueDateSystemImageName,
-                    isProminent: isOverdue
-                )
-            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(task.title)
+            .accessibilityValue(
+                "\(statusTitle), \(task.category.title), \(task.priority.title) priority, \(dueDateText)"
+            )
+            .accessibilityHint("Opens task details")
         }
         .padding()
         .background(
@@ -115,6 +156,29 @@ struct TaskCardView: View {
         }
         .padding(.vertical, 4)
     }
+    
+    // MARK: - Subviews
+
+        @ViewBuilder
+        private var taskMetadata: some View {
+            metadataBadge(
+                title: task.category.title,
+                systemImageName: task.category.systemImageName
+            )
+
+            metadataBadge(
+                title: task.priority.title,
+                systemImageName: task.priority.systemImageName
+            )
+
+            metadataBadge(
+                title: dueDateText,
+                systemImageName: dueDateSystemImageName,
+                isProminent: isOverdue
+            )
+        }
+    
+    // MARK: - Helpers
     
     private func metadataBadge(
         title: String,
@@ -143,10 +207,17 @@ struct TaskCardView: View {
     }
 }
 
+// MARK: - Previews
+
 #Preview("Active") {
-    TaskCardView(task: SampleData.tasks[0], onToggleCompleted: {})
-        .padding()
-        .background(AppTheme.background)
+    TaskCardView(
+        task: SampleData.tasks[0],
+        referenceDate: .now,
+        onToggleCompleted: {},
+        onOpenDetails: {}
+    )
+    .padding()
+    .background(AppTheme.background)
 }
 
 #Preview("Completed") {
@@ -159,7 +230,9 @@ struct TaskCardView: View {
             isCompleted: true,
             completedAt: .now
         ),
-        onToggleCompleted: {}
+        referenceDate: .now,
+        onToggleCompleted: {},
+        onOpenDetails: {}
     )
     .padding()
     .background(AppTheme.background)
@@ -178,7 +251,9 @@ struct TaskCardView: View {
             priority: .high,
             category: .study
         ),
-        onToggleCompleted: {}
+        referenceDate: .now,
+        onToggleCompleted: {},
+        onOpenDetails: {}
     )
     .padding()
     .background(AppTheme.background)

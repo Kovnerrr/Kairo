@@ -8,11 +8,16 @@
 import SwiftUI
 
 struct EmptyStateView: View {
+    
+    // MARK: - Properties
+    
     let systemImageName: String
     let title: String
     let message: String
     let actionTitle: String?
     let action: (() -> Void)?
+    
+    // MARK: - Initialization
     
     init(
         systemImageName: String,
@@ -28,6 +33,7 @@ struct EmptyStateView: View {
         self.action = action
     }
     
+    // MARK: - Body
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: systemImageName)
@@ -67,6 +73,8 @@ struct EmptyStateView: View {
         }
     }
 }
+
+// MARK: - Previews
 
 #Preview("No Action") {
     EmptyStateView(

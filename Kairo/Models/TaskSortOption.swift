@@ -7,7 +7,7 @@
 
 import Foundation
 
-///Describes how tasks should be ordered in the list.
+/// Describes how tasks should be ordered in the list.
 enum TaskSortOption: String, CaseIterable, Identifiable, Codable {
     case dueDateAscending
     case dueDateDescending

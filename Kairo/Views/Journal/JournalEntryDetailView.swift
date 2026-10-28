@@ -13,6 +13,8 @@ struct JournalEntryDetailView: View {
     
     let entry: JournalEntry
     
+    // MARK: - Environment
+    
     @Environment(\.modelContext) private var modelContext
     
     // MARK: - State
@@ -22,36 +24,45 @@ struct JournalEntryDetailView: View {
     // MARK: - Body
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(entry.title)
-                        .font(AppTheme.Typography.sectionTitle)
-                        .foregroundStyle(.primary)
+        ZStack {
+            AppTheme.background
+                .ignoresSafeArea()
+            
+            AnimatedAppBackground()
+                .ignoresSafeArea()
+                .accessibilityHidden(true)
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(entry.title)
+                            .font(AppTheme.Typography.detailTitle)
+                            .foregroundStyle(.primary)
+                        
+                        Text(
+                            entry.entryDate,
+                            format: .dateTime
+                                .day()
+                                .month(.wide)
+                                .year()
+                        )
+                        .font(AppTheme.Typography.secondary)
+                        .foregroundStyle(.secondary)
+                    }
                     
-                    Text(
-                        entry.entryDate,
-                        format: .dateTime
-                            .day()
-                            .month(.wide)
-                            .year()
-                    )
-                    .font(AppTheme.Typography.secondary)
-                    .foregroundStyle(.secondary)
+                    Divider()
+                    
+                    Text(entry.bodyText)
+                        .font(AppTheme.Typography.body)
+                        .foregroundStyle(.primary)
+                        .frame(
+                            maxWidth: .infinity,
+                            alignment: .leading
+                        )
+                        .textSelection(.enabled)
                 }
-                
-                Divider()
-                
-                Text(entry.bodyText)
-                    .font(AppTheme.Typography.body)
-                    .foregroundStyle(.primary)
-                    .frame(
-                        maxWidth: .infinity,
-                        alignment: .leading
-                    )
-                    .textSelection(.enabled)
+                .padding()
             }
-            .padding()
         }
         .navigationTitle("Journal Entry")
         .navigationBarTitleDisplayMode(.inline)
@@ -111,6 +122,30 @@ struct JournalEntryDetailView: View {
         tasks: [],
         journalEntries: [entry]
     )
+    
+    return NavigationStack {
+        JournalEntryDetailView(entry: entry)
+    }
+    .modelContainer(container)
+    .font(AppTheme.Typography.body)
+    .tint(AppTheme.accent)
+}
+
+#Preview("Journal Entry - Long Text / Large Type") {
+    let entry = JournalEntry(
+        title: "A day of learning SwiftUI, reviewing Kairo, and planning the next steps",
+        bodyText: """
+        Today I reviewed the calendar and the task cards.
+        I want the screens to feel consistent and remain easy to read.
+
+        Tomorrow I will continue learning and review the changes carefully.
+        """
+    )
+
+    let container = PreviewContainer.make(
+        tasks: [],
+        journalEntries: [entry]
+    )
 
     return NavigationStack {
         JournalEntryDetailView(entry: entry)
@@ -118,4 +153,6 @@ struct JournalEntryDetailView: View {
     .modelContainer(container)
     .font(AppTheme.Typography.body)
     .tint(AppTheme.accent)
+    .dynamicTypeSize(.accessibility3)
+    .preferredColorScheme(.dark)
 }

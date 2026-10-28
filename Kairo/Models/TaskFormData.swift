@@ -8,11 +8,16 @@
 import Foundation
 
 struct TaskFormData {
+    
+    // MARK: - Stored Properties
+    
     let title: String
     let taskDescription: String?
     let dueDate: Date
     let priority: TaskPriority
     let category: TaskCategory
+    
+    // MARK: - Initialization
     
     init(
         title: String = "",

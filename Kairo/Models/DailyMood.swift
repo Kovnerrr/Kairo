@@ -10,12 +10,17 @@ import SwiftData
 
 @Model
 final class DailyMood {
+    
+    // MARK: - Stored Properties
+    
     @Attribute(.unique) var id: UUID
     @Attribute(.unique) var dayKey: String
     
     var moodRawValue: String
     var createdAt: Date
     var updatedAt: Date
+    
+    // MARK: - Initialization
     
     init(
         id: UUID = UUID(),
@@ -30,6 +35,8 @@ final class DailyMood {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
+    
+    // MARK: - Computed Properties
     
     var mood: MoodType {
         get {

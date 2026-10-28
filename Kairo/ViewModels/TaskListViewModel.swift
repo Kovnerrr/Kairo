@@ -11,7 +11,9 @@ import Observation
 @MainActor
 @Observable
 final class TaskListViewModel {
+    
     // MARK: - Defaults
+    
     private enum DefaultControls {
         static let filter: TaskFilter = .all
         static let sortOption: TaskSortOption = .dueDateAscending
@@ -35,9 +37,11 @@ final class TaskListViewModel {
     }
     
     // MARK: - Form Presentation
+    
     var formRoute: TaskFormRoute?
     
     // MARK: - Form Actions
+    
     func openCreateForm() {
         formRoute = .create
     }
@@ -51,11 +55,13 @@ final class TaskListViewModel {
     }
     
     // MARK: - Search
+    
     func clearSearch() {
         searchText = ""
     }
     
     // MARK: - Control Actions
+    
     func resetControls() {
         selectedFilter = DefaultControls.filter
         selectedSortOption = DefaultControls.sortOption
@@ -63,15 +69,17 @@ final class TaskListViewModel {
     }
     
     // MARK: - Task Processing
+    
     func filteredAndSortedTasks(from tasks: [TaskItem]) -> [TaskItem] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let searchedTasks = tasks.filter { task in
             guard !query.isEmpty else { return true }
             
             let titleMatches = task.title.localizedCaseInsensitiveContains(query)
+            
             let descriptionMatches =
             task.taskDescription?.localizedCaseInsensitiveContains(query) ?? false
-            
+
             return titleMatches || descriptionMatches
         }
         
@@ -99,6 +107,7 @@ final class TaskListViewModel {
     }
     
     // MARK: - Statistics
+    
     func statistics(from tasks: [TaskItem]) -> TaskStatistics {
         let total = tasks.count
         

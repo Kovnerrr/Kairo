@@ -404,3 +404,29 @@ struct TodayView: View {
         .font(AppTheme.Typography.body)
         .tint(AppTheme.accent)
 }
+
+#Preview("Today - Mood and Journal / Large Type") {
+    let now = Date.now
+    let tasks = SampleData.tasks
+
+    tasks.forEach { task in
+        task.dueDate = now
+    }
+
+    let mood = DailyMood(
+        dayKey: MoodDayKey.make(for: now),
+        mood: .good
+    )
+
+    let container = PreviewContainer.make(
+        tasks: tasks,
+        journalEntries: SampleData.journalEntries,
+        moods: [mood]
+    )
+
+    return TodayView()
+        .modelContainer(container)
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+        .dynamicTypeSize(.accessibility3)
+}

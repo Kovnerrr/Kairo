@@ -20,7 +20,7 @@ struct TaskFormView: View {
     
     let navigationTitle: String
     
-    // MARK: - Actions
+    // MARK: - Callbacks
     
     let onCancel: () -> Void
     let onSave: (TaskFormData) -> Void
@@ -72,46 +72,54 @@ struct TaskFormView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Details") {
-                    TextField("Title", text: $title)
+            ZStack {
+                AppTheme.background
+                    .ignoresSafeArea()
+                
+                AnimatedAppBackground()
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
+                
+                Form {
+                    Section("Details") {
+                        TextField("Title", text: $title)
+                            .font(AppTheme.Typography.textField)
+                        TextField(
+                            "Description",
+                            text: $taskDescription,
+                            axis: .vertical
+                        )
                         .font(AppTheme.Typography.textField)
-                    TextField(
-                        "Description",
-                        text: $taskDescription,
-                        axis: .vertical
-                    )
-                    .font(AppTheme.Typography.textField)
-                    .lineLimit(3...6)
-                }
-                .listRowBackground(AppTheme.surface)
-                
-                Section("Schedule") {
-                    DatePicker(
-                        "Due Date",
-                        selection: $dueDate,
-                        displayedComponents: .date
-                    )
-                }
-                .listRowBackground(AppTheme.surface)
-                
-                Section("Organization") {
-                    Picker("Priority", selection: $priority) {
-                        ForEach(TaskPriority.allCases) { priority in
-                            Text(priority.title).tag(priority)
-                        }
+                        .lineLimit(3...6)
                     }
+                    .listRowBackground(AppTheme.surface)
                     
-                    Picker("Category", selection: $category) {
-                        ForEach(TaskCategory.allCases) { category in
-                            Text(category.title).tag(category)
+                    Section("Schedule") {
+                        DatePicker(
+                            "Due Date",
+                            selection: $dueDate,
+                            displayedComponents: .date
+                        )
+                    }
+                    .listRowBackground(AppTheme.surface)
+                    
+                    Section("Organization") {
+                        Picker("Priority", selection: $priority) {
+                            ForEach(TaskPriority.allCases) { priority in
+                                Text(priority.title).tag(priority)
+                            }
+                        }
+                        
+                        Picker("Category", selection: $category) {
+                            ForEach(TaskCategory.allCases) { category in
+                                Text(category.title).tag(category)
+                            }
                         }
                     }
+                    .listRowBackground(AppTheme.surface)
                 }
-                .listRowBackground(AppTheme.surface)
+                .scrollContentBackground(.hidden)
             }
-            .scrollContentBackground(.hidden)
-            .background(AppTheme.background)
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -138,12 +146,16 @@ struct TaskFormView: View {
     }
 }
 
+// MARK: - Previews
+
 #Preview("Create") {
     TaskFormView(
         navigationTitle: "New Task",
         onCancel: {},
         onSave: { _ in }
     )
+    .font(AppTheme.Typography.body)
+    .tint(AppTheme.accent)
 }
 
 #Preview("Edit") {
@@ -159,4 +171,6 @@ struct TaskFormView: View {
         onCancel: {},
         onSave: { _ in }
     )
+    .font(AppTheme.Typography.body)
+    .tint(AppTheme.accent)
 }

@@ -8,8 +8,13 @@
 import SwiftUI
 
 struct MoodPickerView: View {
+    
+    // MARK: - Properties
+    
     let selectedMood: MoodType?
     let onSelectMood: (MoodType) -> Void
+    
+    // MARK: - Body
     
     var body: some View {
         HStack(spacing: 8) {
@@ -46,6 +51,8 @@ struct MoodPickerView: View {
         }
     }
 }
+
+// MARK: - Previews
 
 #Preview("No Selection") {
     MoodPickerView(selectedMood: nil, onSelectMood: { _ in })

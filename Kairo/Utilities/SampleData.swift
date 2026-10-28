@@ -36,7 +36,7 @@ enum SampleData {
             ),
             TaskItem(
                 title: "Prepare books for B2 German Course",
-                taskDescription: "Thinking about future German Course, and buy everything what i need",
+                taskDescription: "Plan the German course and buy the books I need.",
                 dueDate: Calendar.current.date(byAdding: .day, value: 3, to: .now) ?? .now,
                 priority: .medium,
                 category: .study,

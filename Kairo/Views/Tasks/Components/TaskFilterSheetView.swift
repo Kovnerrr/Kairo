@@ -73,7 +73,6 @@ struct TaskFilterSheetView: View {
                 }
             }
             .pickerStyle(.inline)
-            // Keeps the label available to VoiceOver while hiding it visually.
             .labelsHidden()
         }
     }
@@ -90,7 +89,6 @@ struct TaskFilterSheetView: View {
                 }
             }
             .pickerStyle(.inline)
-            // Keeps the label available to VoiceOver while hiding it visually.
             .labelsHidden()
         }
     }
@@ -107,6 +105,10 @@ struct TaskFilterSheetView: View {
     }
 }
 
-#Preview {
+// MARK: - Previews
+
+#Preview("Filter and Sort") {
     TaskFilterSheetView(viewModel: TaskListViewModel())
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
 }
