@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 /// Provides sample data for previews and development.
 enum SampleData {
@@ -44,6 +45,171 @@ enum SampleData {
                 completedAt: .now
             )
         ]
+    }
+    
+    // MARK: - Journal Photo Preview Fixtures
+
+    @MainActor
+    static var journalEntryWithPhotos: JournalEntry {
+        let entry = JournalEntry(
+            title: "A weekend worth remembering",
+            bodyText: """
+            A sunny afternoon, a peaceful walk,
+            and a few favorite moments captured in photos.
+            """
+        )
+
+        let samples: [(size: CGSize, color: UIColor, title: String)] = [
+            (
+                CGSize(width: 1200, height: 800),
+                .systemTeal,
+                "1 · Landscape"
+            ),
+            (
+                CGSize(width: 800, height: 1200),
+                .systemOrange,
+                "2 · Portrait"
+            ),
+            (
+                CGSize(width: 1000, height: 1000),
+                .systemIndigo,
+                "3 · Square"
+            )
+        ]
+
+        for (position, sample) in samples.enumerated() {
+            let image = makeJournalPreviewImage(
+                size: sample.size,
+                color: sample.color,
+                title: sample.title
+            )
+
+            let thumbnail = makeJournalPreviewThumbnail(
+                from: image
+            )
+
+            guard let imageData = image.jpegData(
+                compressionQuality: 0.8
+            ),
+            let thumbnailData = thumbnail.jpegData(
+                compressionQuality: 0.8
+            ) else {
+                continue
+            }
+
+            let photo = JournalPhoto(
+                position: position,
+                imageData: imageData,
+                thumbnailData: thumbnailData,
+                entry: entry
+            )
+
+            entry.photos.append(photo)
+        }
+
+        return entry
+    }
+
+    // MARK: - Preview Image Rendering
+
+    @MainActor
+    private static func makeJournalPreviewImage(
+        size: CGSize,
+        color: UIColor,
+        title: String
+    ) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        format.preferredRange = .standard
+
+        let renderer = UIGraphicsImageRenderer(
+            size: size,
+            format: format
+        )
+
+        return renderer.image { context in
+            let bounds = CGRect(
+                origin: .zero,
+                size: size
+            )
+
+            color.setFill()
+            context.fill(bounds)
+
+            let border = bounds.insetBy(
+                dx: 32,
+                dy: 32
+            )
+
+            context.cgContext.setStrokeColor(
+                UIColor.white.withAlphaComponent(0.8).cgColor
+            )
+            context.cgContext.setLineWidth(8)
+            context.cgContext.stroke(border)
+
+            let fontSize = min(size.width, size.height) * 0.07
+
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(
+                    ofSize: fontSize,
+                    weight: .bold
+                ),
+                .foregroundColor: UIColor.white
+            ]
+
+            let text = title as NSString
+            let textSize = text.size(withAttributes: attributes)
+
+            let textOrigin = CGPoint(
+                x: (size.width - textSize.width) / 2,
+                y: (size.height - textSize.height) / 2
+            )
+
+            text.draw(
+                at: textOrigin,
+                withAttributes: attributes
+            )
+        }
+    }
+
+    @MainActor
+    private static func makeJournalPreviewThumbnail(
+        from image: UIImage
+    ) -> UIImage {
+        let maximumPixelSize: CGFloat = 400
+
+        let ratio = min(
+            1,
+            maximumPixelSize / max(
+                image.size.width,
+                image.size.height
+            )
+        )
+
+        let thumbnailSize = CGSize(
+            width: (image.size.width * ratio).rounded(),
+            height: (image.size.height * ratio).rounded()
+        )
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        format.preferredRange = .standard
+
+        let renderer = UIGraphicsImageRenderer(
+            size: thumbnailSize,
+            format: format
+        )
+
+        return renderer.image { _ in
+            image.draw(
+                in: CGRect(
+                    origin: .zero,
+                    size: thumbnailSize
+                )
+            )
+        }
     }
     
     // MARK: - Journal Entries

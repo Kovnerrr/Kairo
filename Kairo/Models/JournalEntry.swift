@@ -20,6 +20,11 @@ final class JournalEntry {
     var createdAt: Date
     var updatedAt: Date
     
+    // MARK: - Relationships
+    
+    @Relationship(deleteRule: .cascade, inverse: \JournalPhoto.entry)
+    var photos: [JournalPhoto] = []
+    
     // MARK: - Initialization
     
     init(

@@ -36,6 +36,7 @@ enum PreviewContainer {
                 for: TaskItem.self,
                 DailyMood.self,
                 JournalEntry.self,
+                JournalPhoto.self,
                 configurations: configuration
             )
 

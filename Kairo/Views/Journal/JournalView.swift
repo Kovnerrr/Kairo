@@ -140,6 +140,11 @@ struct JournalView: View {
     // MARK: - Actions
     
     private func createEntry(from formData: JournalEntryFormData) throws {
+        // Save unrelated pending changes before creating the entry.
+        if modelContext.hasChanges {
+            try modelContext.save()
+        }
+
         let now = Date.now
 
         let entry = JournalEntry(
@@ -154,13 +159,31 @@ struct JournalView: View {
             updatedAt: now
         )
 
+        // Create photo models from imported drafts.
+        for (position, draft) in formData.photos.enumerated() {
+            guard case let .imported(imageData) = draft.source else {
+                continue
+            }
+
+            let photo = JournalPhoto(
+                id: draft.id,
+                position: position,
+                imageData: imageData,
+                thumbnailData: draft.thumbnailData,
+                entry: entry
+            )
+
+            entry.photos.append(photo)
+        }
+
         modelContext.insert(entry)
 
         do {
             try modelContext.save()
             isCreateSheetPresented = false
         } catch {
-            modelContext.delete(entry)
+            // Revert this creation after the successful pre-save.
+            modelContext.rollback()
             throw error
         }
     }

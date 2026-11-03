@@ -20,6 +20,15 @@ struct JournalEntryDetailView: View {
     // MARK: - State
     
     @State private var isEditSheetPresented = false
+    @State private var selectedPhotoID: SelectedJournalPhoto?
+    
+    // MARK: - Computed Properties
+
+    private var sortedPhotos: [JournalPhoto] {
+        entry.photos.sorted {
+            $0.position < $1.position
+        }
+    }
     
     // MARK: - Body
     
@@ -52,6 +61,56 @@ struct JournalEntryDetailView: View {
                     
                     Divider()
                     
+                    if !sortedPhotos.isEmpty {
+                        ScrollView(.horizontal) {
+                            HStack(spacing: 12) {
+                                ForEach(
+                                    Array(sortedPhotos.enumerated()),
+                                    id: \.element.id
+                                ) { index, photo in
+                                    Button {
+                                        selectedPhotoID = SelectedJournalPhoto(
+                                            id: photo.id
+                                        )
+                                    } label: {
+                                        Group {
+                                            if let image = UIImage(
+                                                data: photo.thumbnailData
+                                            ) {
+                                                Image(uiImage: image)
+                                                    .resizable()
+                                                    .scaledToFill()
+                                            } else {
+                                                ZStack {
+                                                    AppTheme.surface
+
+                                                    Image(
+                                                        systemName: "photo.badge.exclamationmark"
+                                                    )
+                                                    .font(.title)
+                                                    .foregroundStyle(.secondary)
+                                                }
+                                            }
+                                        }
+                                        .frame(width: 160, height: 160)
+                                        .clipped()
+                                        .clipShape(
+                                            RoundedRectangle(cornerRadius: 12)
+                                        )
+                                        .contentShape(
+                                            RoundedRectangle(cornerRadius: 12)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel(
+                                        "Open photo \(index + 1) of \(entry.photos.count)"
+                                    )
+                                }
+                            }
+                        }
+                        .scrollIndicators(.hidden)
+                    }
+                    
                     Text(entry.bodyText)
                         .font(AppTheme.Typography.body)
                         .foregroundStyle(.primary)
@@ -81,37 +140,82 @@ struct JournalEntryDetailView: View {
                 try updateEntry(from: formData)
             }
         }
+        
+        .fullScreenCover(item: $selectedPhotoID) { selection in
+            JournalPhotoViewer(
+                photos: sortedPhotos,
+                selectedPhotoID: selection.id
+            )
+        }
     }
     
     // MARK: - Actions
     
     private func updateEntry(from formData: JournalEntryFormData) throws {
-        let previousTitle = entry.title
-        let previousBodyText = entry.bodyText
-        let previousEntryDate = entry.entryDate
-        let previousUpdatedAt = entry.updatedAt
         
+        // Save unrelated pending changes before editing.
+        if modelContext.hasChanges {
+            try modelContext.save()
+        }
+        
+        let retainedIDs = Set(formData.photos.map(\.id))
+        let existingPhotos = Array(entry.photos)
+
+        // Update entry properties.
         entry.title = formData.title.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
+
         entry.bodyText = formData.bodyText.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
+
         entry.entryDate = formData.entryDate
         entry.updatedAt = .now
+
+        // Delete photos removed from the draft.
+        for photo in existingPhotos {
+            if !retainedIDs.contains(photo.id) {
+                modelContext.delete(photo)
+            }
+        }
+
+        // Update existing photos and add imported photos.
+        for (position, draft) in formData.photos.enumerated() {
+            switch draft.source {
+            case .existing:
+                if let photo = existingPhotos.first(
+                    where: { $0.id == draft.id }
+                ) {
+                    photo.position = position
+                }
+                
+            case .imported(let imageData):
+                let photo = JournalPhoto(
+                    id: draft.id,
+                    position: position,
+                    imageData: imageData,
+                    thumbnailData: draft.thumbnailData,
+                    entry: entry
+                )
+                modelContext.insert(photo)
+            }
+        }
         
         do {
             try modelContext.save()
             isEditSheetPresented = false
         } catch {
-            entry.title = previousTitle
-            entry.bodyText = previousBodyText
-            entry.entryDate = previousEntryDate
-            entry.updatedAt = previousUpdatedAt
-            
+            modelContext.rollback()
             throw error
         }
     }
+}
+
+// MARK: - Photo Selection
+
+private struct SelectedJournalPhoto: Identifiable {
+    let id: UUID
 }
 
 // MARK: - Previews
@@ -123,6 +227,22 @@ struct JournalEntryDetailView: View {
         journalEntries: [entry]
     )
     
+    return NavigationStack {
+        JournalEntryDetailView(entry: entry)
+    }
+    .modelContainer(container)
+    .font(AppTheme.Typography.body)
+    .tint(AppTheme.accent)
+}
+
+#Preview("Entry · With Photos") {
+    let entry = SampleData.journalEntryWithPhotos
+
+    let container = PreviewContainer.make(
+        tasks: [],
+        journalEntries: [entry]
+    )
+
     return NavigationStack {
         JournalEntryDetailView(entry: entry)
     }

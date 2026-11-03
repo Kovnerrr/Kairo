@@ -13,6 +13,7 @@ struct JournalEntryFormData {
     var title: String
     var bodyText: String
     var entryDate: Date
+    var photos: [JournalPhotoDraft] = []
     
     // MARK: - Computed Properties
     
@@ -33,5 +34,15 @@ struct JournalEntryFormData {
         self.title = entry.title
         self.bodyText = entry.bodyText
         self.entryDate = entry.entryDate
+        
+        self.photos = entry.photos
+            .sorted { $0.position < $1.position }
+            .map { photo in
+                JournalPhotoDraft(
+                    id: photo.id,
+                    thumbnailData: photo.thumbnailData,
+                    source: .existing
+                )
+            }
     }
 }
