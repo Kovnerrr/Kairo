@@ -7,6 +7,8 @@
 
 import Foundation
 import UIKit
+import SwiftData
+import UniformTypeIdentifiers
 
 /// Provides sample data for previews and development.
 enum SampleData {
@@ -212,6 +214,176 @@ enum SampleData {
         }
     }
     
+    // MARK: - Journal Document Preview Fixtures
+
+    @MainActor
+    static func makeJournalDocumentPreview(
+        includeMissingFile: Bool = false,
+        includeImportedDraft: Bool = false
+    ) async throws -> JournalDocumentPreviewData {
+        let root = FileManager.default.temporaryDirectory
+            .appending(
+                path: "KairoDocumentPreviews",
+                directoryHint: .isDirectory
+            )
+            .appending(
+                path: UUID().uuidString,
+                directoryHint: .isDirectory
+            )
+
+        let documentsDirectory = root.appending(
+            path: "JournalFiles/Documents",
+            directoryHint: .isDirectory
+        )
+
+        try FileManager.default.createDirectory(
+            at: documentsDirectory,
+            withIntermediateDirectories: true
+        )
+
+        let fileStorage = JournalFileStorage(
+            storageRoot: root,
+            temporaryRoot: root
+        )
+
+        let entry = journalEntryWithPhotos
+
+        let renderer = UIGraphicsPDFRenderer(
+            bounds: CGRect(
+                x: 0,
+                y: 0,
+                width: 595,
+                height: 842
+            )
+        )
+
+        let pdfData = renderer.pdfData { context in
+            context.beginPage()
+
+            let text = """
+            Kairo — Journal Preview
+
+            This is a small PDF document for SwiftUI previews.
+            """
+
+            (text as NSString).draw(
+                in: CGRect(
+                    x: 40,
+                    y: 40,
+                    width: 515,
+                    height: 300
+                ),
+                withAttributes: [
+                    .font: UIFont.systemFont(ofSize: 20),
+                    .foregroundColor: UIColor.black
+                ]
+            )
+        }
+
+        let textData = Data(
+            """
+            Kairo Journal Preview
+
+            A small UTF-8 text document.
+            English, Українська, Русский, Deutsch.
+            """.utf8
+        )
+
+        let samples: [(name: String, type: UTType, data: Data)] = [
+            ("Weekend notes.pdf", .pdf, pdfData),
+            ("Reflection.txt", .plainText, textData)
+        ]
+
+        var textURL: URL?
+
+        for (position, sample) in samples.enumerated() {
+            let id = UUID()
+            let ext = sample.type == .pdf ? "pdf" : "txt"
+            let storedFileName = id.uuidString + "." + ext
+
+            let url = documentsDirectory.appending(
+                path: storedFileName,
+                directoryHint: .notDirectory
+            )
+
+            try sample.data.write(to: url, options: .atomic)
+
+            let file = JournalFile(
+                id: id,
+                displayName: sample.name,
+                storedFileName: storedFileName,
+                contentTypeIdentifier: sample.type.identifier,
+                fileSize: Int64(sample.data.count),
+                position: position,
+                entry: entry
+            )
+
+            entry.files.append(file)
+
+            if sample.type == .plainText {
+                textURL = url
+            }
+        }
+
+        if includeMissingFile {
+            let file = JournalFile(
+                displayName: "Missing document.pdf",
+                storedFileName: UUID().uuidString + ".pdf",
+                contentTypeIdentifier: UTType.pdf.identifier,
+                fileSize: 1024,
+                position: entry.files.count,
+                entry: entry
+            )
+
+            entry.files.append(file)
+        }
+
+        var formData = JournalEntryFormData(entry: entry)
+        var sessionID: UUID?
+
+        do {
+            if includeImportedDraft {
+                guard let textURL else {
+                    throw JournalFileStorageError.fileUnavailable
+                }
+
+                let createdSessionID = try await fileStorage.createSession()
+                sessionID = createdSessionID
+
+                let importedFile = try await fileStorage.importFile(
+                    from: .appOwned(textURL),
+                    sessionID: createdSessionID
+                )
+
+                // Show one retained document and one newly imported draft.
+                formData.files = Array(formData.files.prefix(1))
+                formData.files.append(.imported(importedFile))
+            }
+
+            try Task.checkCancellation()
+
+            let container = PreviewContainer.make(
+                tasks: [],
+                journalEntries: [entry]
+            )
+
+            return JournalDocumentPreviewData(
+                entry: entry,
+                formData: formData,
+                container: container,
+                fileStorage: fileStorage,
+                fileSessionID: sessionID
+            )
+
+        } catch {
+            if let sessionID {
+                await fileStorage.closeSession(id: sessionID)
+            }
+
+            throw error
+        }
+    }
+    
     // MARK: - Journal Entries
     
     static var journalEntries: [JournalEntry] {
@@ -272,4 +444,14 @@ enum SampleData {
             )
         ]
     }
+}
+
+// MARK: - Journal Document Preview Data
+
+struct JournalDocumentPreviewData {
+    let entry: JournalEntry
+    let formData: JournalEntryFormData
+    let container: ModelContainer
+    let fileStorage: JournalFileStorage
+    let fileSessionID: UUID?
 }

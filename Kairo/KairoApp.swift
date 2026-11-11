@@ -11,13 +11,21 @@ import SwiftData
 @main
 struct KairoApp: App {
     
+    // MARK: - State
+    
+    @State private var startupPhase: JournalStartupPhase = .idle
+    @State private var recoveryStorage = JournalFileStorage()
+    
     // MARK: - Body
     
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .font(AppTheme.Typography.body)
-                .tint(AppTheme.accent)
+            JournalStartupView(
+                phase: $startupPhase,
+                fileStorage: recoveryStorage
+            )
+            .font(AppTheme.Typography.body)
+            .tint(AppTheme.accent)
         }
         
         // The model container makes SwiftData models available
@@ -27,7 +35,99 @@ struct KairoApp: App {
             TaskItem.self,
             DailyMood.self,
             JournalEntry.self,
-            JournalPhoto.self
+            JournalPhoto.self,
+            JournalFile.self
         ])
+    }
+}
+
+// MARK: - Startup State
+
+private enum JournalStartupPhase {
+    case idle
+    case running
+    case ready
+    case failed(String)
+}
+
+// MARK: - Startup View
+
+private struct JournalStartupView: View {
+    @Environment(\.modelContext) private var modelContext
+
+    @Binding var phase: JournalStartupPhase
+
+    let fileStorage: JournalFileStorage
+
+    var body: some View {
+        ZStack {
+            switch phase {
+            case .idle, .running:
+                ProgressView("Preparing Kairo…")
+
+            case .ready:
+                RootView()
+
+            case .failed(let message):
+                VStack(spacing: 16) {
+                    Text("Document cleanup couldn't finish")
+                        .font(.headline)
+
+                    Text(message)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+
+                    Button("Try Again") {
+                        Task {
+                            await runRecovery()
+                        }
+                    }
+
+                    Button("Continue Without Cleanup") {
+                        phase = .ready
+                    }
+                }
+                .padding()
+            }
+        }
+        .task {
+            guard case .idle = phase else {
+                return
+            }
+
+            await runRecovery()
+        }
+    }
+
+    @MainActor
+    private func runRecovery() async {
+        switch phase {
+        case .running, .ready:
+            return
+
+        case .idle, .failed:
+            break
+        }
+
+        phase = .running
+
+        do {
+            let files = try modelContext.fetch(
+                FetchDescriptor<JournalFile>()
+            )
+
+            let referencedFileNames = Set(
+                files.map(\.storedFileName)
+            )
+
+            try await fileStorage.recoverAtLaunch(
+                referencedFileNames: referencedFileNames
+            )
+
+            phase = .ready
+
+        } catch {
+            phase = .failed(error.localizedDescription)
+        }
     }
 }

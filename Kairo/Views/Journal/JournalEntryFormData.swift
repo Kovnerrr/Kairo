@@ -14,12 +14,17 @@ struct JournalEntryFormData {
     var bodyText: String
     var entryDate: Date
     var photos: [JournalPhotoDraft] = []
+    var files: [JournalFileDraft] = []
     
     // MARK: - Computed Properties
     
     var isValid: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        photos.count <= 5 &&
+        files.count <= 3 &&
+        Set(photos.map(\.id)).count == photos.count &&
+        Set(files.map(\.id)).count == files.count
     }
     
     // MARK: - Initialization
@@ -35,6 +40,7 @@ struct JournalEntryFormData {
         self.bodyText = entry.bodyText
         self.entryDate = entry.entryDate
         
+        // Load existing photos.
         self.photos = entry.photos
             .sorted { $0.position < $1.position }
             .map { photo in
@@ -44,5 +50,39 @@ struct JournalEntryFormData {
                     source: .existing
                 )
             }
+        
+        // Load existing documents.
+        self.files = entry.files
+            .sorted { $0.position < $1.position }
+            .map { file in
+                JournalFileDraft.existing(
+                    id: file.id,
+                    displayName: file.displayName,
+                    storedFileName: file.storedFileName,
+                    contentTypeIdentifier: file.contentTypeIdentifier,
+                    fileSize: file.fileSize
+                )
+            }
+    }
+}
+
+// MARK: - Save Errors
+
+enum JournalEntrySaveError: LocalizedError {
+    case invalidForm
+    case entryUnavailable
+    case attachmentUnavailable
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidForm:
+            "Check the entry text and attachment limits."
+
+        case .entryUnavailable:
+            "This journal entry is no longer available."
+
+        case .attachmentUnavailable:
+            "An attachment is no longer available. Reopen the entry and try again."
+        }
     }
 }

@@ -37,6 +37,7 @@ enum PreviewContainer {
                 DailyMood.self,
                 JournalEntry.self,
                 JournalPhoto.self,
+                JournalFile.self,
                 configurations: configuration
             )
 

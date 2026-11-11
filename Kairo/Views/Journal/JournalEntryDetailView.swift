@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import QuickLook
 
 struct JournalEntryDetailView: View {
     // MARK: - Properties
@@ -21,11 +22,31 @@ struct JournalEntryDetailView: View {
     
     @State private var isEditSheetPresented = false
     @State private var selectedPhotoID: SelectedJournalPhoto?
+    @State private var fileStorage: JournalFileStorage
+    @State private var fileSessionID: UUID?
+    @State private var selectedDocumentURL: URL?
+    @State private var documentPreviewError: String?
+    
+    // MARK: - Initialization
+
+    init(
+        entry: JournalEntry,
+        fileStorage: JournalFileStorage = JournalFileStorage()
+    ) {
+        self.entry = entry
+        _fileStorage = State(initialValue: fileStorage)
+    }
     
     // MARK: - Computed Properties
-
+    
     private var sortedPhotos: [JournalPhoto] {
         entry.photos.sorted {
+            $0.position < $1.position
+        }
+    }
+    
+    private var sortedFiles: [JournalFile] {
+        entry.files.sorted {
             $0.position < $1.position
         }
     }
@@ -83,7 +104,7 @@ struct JournalEntryDetailView: View {
                                             } else {
                                                 ZStack {
                                                     AppTheme.surface
-
+                                                    
                                                     Image(
                                                         systemName: "photo.badge.exclamationmark"
                                                     )
@@ -111,6 +132,51 @@ struct JournalEntryDetailView: View {
                         .scrollIndicators(.hidden)
                     }
                     
+                    // MARK: Documents
+                    
+                    if !sortedFiles.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            
+                            Text("Documents")
+                                .font(.headline)
+                            
+                            ForEach(sortedFiles, id: \.id) { file in
+                                Button {
+                                    openDocument(file)
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "doc.text")
+                                            .foregroundStyle(AppTheme.accent)
+                                        
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(file.displayName)
+                                                .lineLimit(2)
+                                            
+                                            Text(
+                                                ByteCountFormatter.string(
+                                                    fromByteCount: file.fileSize,
+                                                    countStyle: .file
+                                                )
+                                            )
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .frame(minHeight: 44)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Open document \(file.displayName)")
+                            }
+                        }
+                    }
+                    
                     Text(entry.bodyText)
                         .font(AppTheme.Typography.body)
                         .foregroundStyle(.primary)
@@ -132,12 +198,18 @@ struct JournalEntryDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $isEditSheetPresented) {
+        .sheet(
+            isPresented: $isEditSheetPresented,
+            onDismiss: closeFileSession
+        ) {
             JournalEntryFormView(
                 formData: JournalEntryFormData(entry: entry),
-                navigationTitle: "Edit Entry"
+                navigationTitle: "Edit Entry",
+                fileStorage: fileStorage,
+                fileSessionID: $fileSessionID,
+                isPresented: $isEditSheetPresented
             ) { formData in
-                try updateEntry(from: formData)
+                try await updateEntry(from: formData)
             }
         }
         
@@ -147,67 +219,218 @@ struct JournalEntryDetailView: View {
                 selectedPhotoID: selection.id
             )
         }
+        
+        .quickLookPreview($selectedDocumentURL)
+        .alert(
+            "Couldn't Open Document",
+            isPresented: Binding(
+                get: {
+                    documentPreviewError != nil
+                },
+                set: { isPresented in
+                    if !isPresented {
+                        documentPreviewError = nil
+                    }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                documentPreviewError = nil
+            }
+        } message: {
+            Text(
+                documentPreviewError ?? "An unknown error occurred."
+            )
+        }
     }
     
     // MARK: - Actions
     
-    private func updateEntry(from formData: JournalEntryFormData) throws {
-        
-        // Save unrelated pending changes before editing.
-        if modelContext.hasChanges {
-            try modelContext.save()
-        }
-        
-        let retainedIDs = Set(formData.photos.map(\.id))
-        let existingPhotos = Array(entry.photos)
-
-        // Update entry properties.
-        entry.title = formData.title.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-
-        entry.bodyText = formData.bodyText.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-
-        entry.entryDate = formData.entryDate
-        entry.updatedAt = .now
-
-        // Delete photos removed from the draft.
-        for photo in existingPhotos {
-            if !retainedIDs.contains(photo.id) {
-                modelContext.delete(photo)
-            }
-        }
-
-        // Update existing photos and add imported photos.
-        for (position, draft) in formData.photos.enumerated() {
-            switch draft.source {
-            case .existing:
-                if let photo = existingPhotos.first(
-                    where: { $0.id == draft.id }
-                ) {
-                    photo.position = position
-                }
-                
-            case .imported(let imageData):
-                let photo = JournalPhoto(
-                    id: draft.id,
-                    position: position,
-                    imageData: imageData,
-                    thumbnailData: draft.thumbnailData,
-                    entry: entry
+    private func openDocument(_ file: JournalFile) {
+        Task { @MainActor in
+            do {
+                let url = try await fileStorage.fileURL(
+                    storedFileName: file.storedFileName
                 )
-                modelContext.insert(photo)
+
+                guard FileManager.default.fileExists(atPath: url.path) else {
+                    documentPreviewError = "The document could not be found."
+                    return
+                }
+
+                selectedDocumentURL = url
+            } catch {
+                documentPreviewError = error.localizedDescription
             }
         }
-        
+    }
+    
+    private func updateEntry(
+        from formData: JournalEntryFormData
+    ) async throws {
+        guard formData.isValid else {
+            throw JournalEntrySaveError.invalidForm
+        }
+
+        guard entry.modelContext != nil,
+              !entry.isDeleted else {
+            throw JournalEntrySaveError.entryUnavailable
+        }
+
+        let entryID = entry.id
+
+        let preparedFiles = try await fileStorage.preparePermanentCopies(
+            from: formData.files
+        )
+
+        var removedFileNames: [String] = []
+
         do {
-            try modelContext.save()
-            isEditSheetPresented = false
+            try Task.checkCancellation()
+
+            guard isEditSheetPresented else {
+                throw CancellationError()
+            }
+
+            // No await between this pre-save and the final SwiftData save.
+            if modelContext.hasChanges {
+                try modelContext.save()
+            }
+
+            let descriptor = FetchDescriptor<JournalEntry>(
+                predicate: #Predicate { candidate in
+                    candidate.id == entryID
+                }
+            )
+
+            guard let currentEntry = try modelContext.fetch(descriptor).first,
+                  !currentEntry.isDeleted else {
+                throw JournalEntrySaveError.entryUnavailable
+            }
+
+            let existingPhotos = Array(currentEntry.photos)
+            let existingFiles = Array(currentEntry.files)
+
+            let retainedPhotoIDs = Set(formData.photos.map(\.id))
+            let retainedFileIDs = Set(formData.files.map(\.id))
+
+            let removedFiles = existingFiles.filter {
+                !retainedFileIDs.contains($0.id)
+            }
+
+            // Keep plain values, not deleted SwiftData objects.
+            removedFileNames = removedFiles.map(\.storedFileName)
+
+            do {
+                currentEntry.title = formData.title.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+
+                currentEntry.bodyText = formData.bodyText.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+
+                currentEntry.entryDate = formData.entryDate
+                currentEntry.updatedAt = .now
+
+                for photo in existingPhotos {
+                    if !retainedPhotoIDs.contains(photo.id) {
+                        modelContext.delete(photo)
+                    }
+                }
+
+                for (position, draft) in formData.photos.enumerated() {
+                    switch draft.source {
+                    case .existing:
+                        guard let photo = existingPhotos.first(
+                            where: { $0.id == draft.id }
+                        ) else {
+                            throw JournalEntrySaveError.attachmentUnavailable
+                        }
+
+                        photo.position = position
+
+                    case .imported(let imageData):
+                        let photo = JournalPhoto(
+                            id: draft.id,
+                            position: position,
+                            imageData: imageData,
+                            thumbnailData: draft.thumbnailData,
+                            entry: currentEntry
+                        )
+
+                        modelContext.insert(photo)
+                    }
+                }
+
+                for file in removedFiles {
+                    modelContext.delete(file)
+                }
+
+                for (position, draft) in formData.files.enumerated() {
+                    switch draft {
+                    case .existing(let id, _, _, _, _):
+                        guard let file = existingFiles.first(
+                            where: { $0.id == id }
+                        ) else {
+                            throw JournalEntrySaveError.attachmentUnavailable
+                        }
+
+                        file.position = position
+
+                    case .imported(let importedFile):
+                        guard let prepared = preparedFiles.first(
+                            where: { $0.id == importedFile.id }
+                        ) else {
+                            throw JournalEntrySaveError.attachmentUnavailable
+                        }
+
+                        let file = JournalFile(
+                            id: prepared.id,
+                            displayName: prepared.displayName,
+                            storedFileName: prepared.storedFileName,
+                            contentTypeIdentifier: prepared.contentTypeIdentifier,
+                            fileSize: prepared.fileSize,
+                            position: position,
+                            entry: currentEntry
+                        )
+
+                        modelContext.insert(file)
+                    }
+                }
+
+                try modelContext.save()
+
+            } catch {
+                modelContext.rollback()
+                throw error
+            }
+
         } catch {
-            modelContext.rollback()
+            await fileStorage.removePermanentFiles(
+                storedFileNames: preparedFiles.map(\.storedFileName)
+            )
+
             throw error
+        }
+
+        // SwiftData has committed successfully.
+        await fileStorage.removePermanentFiles(
+            storedFileNames: removedFileNames
+        )
+
+        isEditSheetPresented = false
+    }
+    
+    private func closeFileSession() {
+        guard let sessionID = fileSessionID else {
+            return
+        }
+
+        fileSessionID = nil
+
+        Task {
+            await fileStorage.closeSession(id: sessionID)
         }
     }
 }
@@ -237,12 +460,12 @@ private struct SelectedJournalPhoto: Identifiable {
 
 #Preview("Entry · With Photos") {
     let entry = SampleData.journalEntryWithPhotos
-
+    
     let container = PreviewContainer.make(
         tasks: [],
         journalEntries: [entry]
     )
-
+    
     return NavigationStack {
         JournalEntryDetailView(entry: entry)
     }
@@ -257,16 +480,16 @@ private struct SelectedJournalPhoto: Identifiable {
         bodyText: """
         Today I reviewed the calendar and the task cards.
         I want the screens to feel consistent and remain easy to read.
-
+        
         Tomorrow I will continue learning and review the changes carefully.
         """
     )
-
+    
     let container = PreviewContainer.make(
         tasks: [],
         journalEntries: [entry]
     )
-
+    
     return NavigationStack {
         JournalEntryDetailView(entry: entry)
     }

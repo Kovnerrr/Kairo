@@ -25,6 +25,9 @@ final class JournalEntry {
     @Relationship(deleteRule: .cascade, inverse: \JournalPhoto.entry)
     var photos: [JournalPhoto] = []
     
+    @Relationship(deleteRule: .cascade, inverse: \JournalFile.entry)
+    var files: [JournalFile] = []
+    
     // MARK: - Initialization
     
     init(

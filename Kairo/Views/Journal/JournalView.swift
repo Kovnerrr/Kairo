@@ -24,6 +24,16 @@ struct JournalView: View {
     @State private var isCreateSheetPresented = false
     @State private var entryToDelete: JournalEntry?
     @State private var deleteErrorMessage: String?
+    @State private var fileStorage: JournalFileStorage
+    @State private var fileSessionID: UUID?
+    
+    // MARK: - Initialization
+
+    init(
+        fileStorage: JournalFileStorage = JournalFileStorage()
+    ) {
+        _fileStorage = State(initialValue: fileStorage)
+    }
     
     // MARK: - Body
     
@@ -85,11 +95,17 @@ struct JournalView: View {
                     .accessibilityLabel("Add journal entry")
                 }
             }
-            .sheet(isPresented: $isCreateSheetPresented) {
+            .sheet(
+                isPresented: $isCreateSheetPresented,
+                onDismiss: closeFileSession
+            ) {
                 JournalEntryFormView(
-                    navigationTitle: "New Entry"
+                    navigationTitle: "New Entry",
+                    fileStorage: fileStorage,
+                    fileSessionID: $fileSessionID,
+                    isPresented: $isCreateSheetPresented
                 ) { formData in
-                    try createEntry(from: formData)
+                    try await createEntry(from: formData)
                 }
             }
             .alert(
@@ -139,53 +155,99 @@ struct JournalView: View {
     
     // MARK: - Actions
     
-    private func createEntry(from formData: JournalEntryFormData) throws {
-        // Save unrelated pending changes before creating the entry.
-        if modelContext.hasChanges {
-            try modelContext.save()
+    private func createEntry(
+        from formData: JournalEntryFormData
+    ) async throws {
+        guard formData.isValid else {
+            throw JournalEntrySaveError.invalidForm
         }
 
-        let now = Date.now
-
-        let entry = JournalEntry(
-            title: formData.title.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            ),
-            bodyText: formData.bodyText.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            ),
-            entryDate: formData.entryDate,
-            createdAt: now,
-            updatedAt: now
+        let preparedFiles = try await fileStorage.preparePermanentCopies(
+            from: formData.files
         )
 
-        // Create photo models from imported drafts.
-        for (position, draft) in formData.photos.enumerated() {
-            guard case let .imported(imageData) = draft.source else {
-                continue
+        do {
+            try Task.checkCancellation()
+
+            guard isCreateSheetPresented else {
+                throw CancellationError()
             }
 
-            let photo = JournalPhoto(
-                id: draft.id,
-                position: position,
-                imageData: imageData,
-                thumbnailData: draft.thumbnailData,
-                entry: entry
+            // No await between this pre-save and the final SwiftData save.
+            if modelContext.hasChanges {
+                try modelContext.save()
+            }
+
+            do {
+                let now = Date.now
+
+                let newEntry = JournalEntry(
+                    title: formData.title.trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    ),
+                    bodyText: formData.bodyText.trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    ),
+                    entryDate: formData.entryDate,
+                    createdAt: now,
+                    updatedAt: now
+                )
+
+                for (position, draft) in formData.photos.enumerated() {
+                    guard case let .imported(imageData) = draft.source else {
+                        throw JournalEntrySaveError.invalidForm
+                    }
+
+                    let photo = JournalPhoto(
+                        id: draft.id,
+                        position: position,
+                        imageData: imageData,
+                        thumbnailData: draft.thumbnailData,
+                        entry: newEntry
+                    )
+
+                    newEntry.photos.append(photo)
+                }
+
+                for (position, draft) in formData.files.enumerated() {
+                    guard case let .imported(importedFile) = draft,
+                          let prepared = preparedFiles.first(
+                            where: { $0.id == importedFile.id }
+                          ) else {
+                        throw JournalEntrySaveError.attachmentUnavailable
+                    }
+
+                    let file = JournalFile(
+                        id: prepared.id,
+                        displayName: prepared.displayName,
+                        storedFileName: prepared.storedFileName,
+                        contentTypeIdentifier: prepared.contentTypeIdentifier,
+                        fileSize: prepared.fileSize,
+                        position: position,
+                        entry: newEntry
+                    )
+
+                    newEntry.files.append(file)
+                }
+
+                modelContext.insert(newEntry)
+                try modelContext.save()
+
+            } catch {
+                // Only changes made after the successful pre-save are pending.
+                modelContext.rollback()
+                throw error
+            }
+
+        } catch {
+            await fileStorage.removePermanentFiles(
+                storedFileNames: preparedFiles.map(\.storedFileName)
             )
 
-            entry.photos.append(photo)
-        }
-
-        modelContext.insert(entry)
-
-        do {
-            try modelContext.save()
-            isCreateSheetPresented = false
-        } catch {
-            // Revert this creation after the successful pre-save.
-            modelContext.rollback()
             throw error
         }
+
+        isCreateSheetPresented = false
     }
     
     @MainActor
@@ -193,8 +255,14 @@ struct JournalView: View {
         defer {
             entryToDelete = nil
         }
-        
-        // Save existing changes before starting the deletion.
+
+        guard entry.modelContext != nil,
+              !entry.isDeleted else {
+            deleteErrorMessage =
+                JournalEntrySaveError.entryUnavailable.localizedDescription
+            return
+        }
+
         do {
             if modelContext.hasChanges {
                 try modelContext.save()
@@ -203,15 +271,37 @@ struct JournalView: View {
             deleteErrorMessage = error.localizedDescription
             return
         }
-        
+
+        // Read filenames before deleting the models.
+        let storedFileNames = entry.files.map(\.storedFileName)
+
         modelContext.delete(entry)
-        
+
         do {
             try modelContext.save()
         } catch {
-            // Only the deletion is pending after the successful pre-save.
             modelContext.rollback()
             deleteErrorMessage = error.localizedDescription
+            return
+        }
+
+        // The database deletion has already succeeded.
+        Task {
+            await fileStorage.removePermanentFiles(
+                storedFileNames: storedFileNames
+            )
+        }
+    }
+    
+    private func closeFileSession() {
+        guard let sessionID = fileSessionID else {
+            return
+        }
+
+        fileSessionID = nil
+
+        Task {
+            await fileStorage.closeSession(id: sessionID)
         }
     }
 }
