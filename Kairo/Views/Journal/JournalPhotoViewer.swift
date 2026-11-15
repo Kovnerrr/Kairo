@@ -10,44 +10,55 @@ import SwiftData
 import UIKit
 
 struct JournalPhotoViewer: View {
-
+    
     // MARK: - Environment
-
+    
     @Environment(\.dismiss) private var dismiss
-
+    
     // MARK: - Properties
-
+    
     let photos: [JournalPhoto]
-
+    let onOpenEntry: ((JournalEntry) -> Void)?
+    
     // MARK: - State
-
+    
     @State private var selectedPhotoID: UUID
-
+    
     // MARK: - Initialization
-
+    
     init(
         photos: [JournalPhoto],
-        selectedPhotoID: UUID
+        selectedPhotoID: UUID,
+        onOpenEntry: ((JournalEntry) -> Void)? = nil
     ) {
         self.photos = photos
+        self.onOpenEntry = onOpenEntry
         _selectedPhotoID = State(initialValue: selectedPhotoID)
     }
-
+    
     // MARK: - Computed Properties
-
+    
     private var currentPhotoIndex: Int {
         photos.firstIndex {
             $0.id == selectedPhotoID
         } ?? 0
     }
-
+    
+    private var currentEntry: JournalEntry? {
+        photos.first {
+            $0.id == selectedPhotoID
+        }?.entry
+    }
+    
     // MARK: - Body
-
+    
     var body: some View {
+        let selectedIndex = currentPhotoIndex
+        
         ZStack {
             Color.black
                 .ignoresSafeArea()
-
+            
             TabView(selection: $selectedPhotoID) {
                 ForEach(
                     Array(photos.enumerated()),
@@ -56,6 +67,7 @@ struct JournalPhotoViewer: View {
                     ZoomableJournalPhoto(
                         photo: photo,
                         isSelected: photo.id == selectedPhotoID,
+                        shouldLoadImage: abs(index - selectedIndex) <= 1,
                         photoLabel: String(
                             localized: "Photo \(index + 1) of \(photos.count)"
                         ),
@@ -63,7 +75,7 @@ struct JournalPhotoViewer: View {
                             guard selectedPhotoID == photo.id else {
                                 return
                             }
-
+                            
                             dismiss()
                         }
                     )
@@ -71,11 +83,11 @@ struct JournalPhotoViewer: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-
+            
             VStack {
                 HStack {
                     Spacer()
-
+                    
                     Button {
                         dismiss()
                     } label: {
@@ -90,18 +102,43 @@ struct JournalPhotoViewer: View {
                     }
                     .accessibilityLabel("Close photo viewer")
                 }
-
+                
                 Spacer()
-
-                Text("\(currentPhotoIndex + 1) / \(photos.count)")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(
-                        .black.opacity(0.5),
-                        in: Capsule()
-                    )
+                
+                VStack(spacing: 12) {
+                    Text("\(selectedIndex + 1) / \(photos.count)")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            .black.opacity(0.5),
+                            in: Capsule()
+                        )
+                    
+                    if let onOpenEntry, let currentEntry {
+                        Button {
+                            onOpenEntry(currentEntry)
+                        } label: {
+                            Label(
+                                "Open Entry",
+                                systemImage: "arrow.up.right"
+                            )
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 20)
+                            .frame(minHeight: 44)
+                            .background(
+                                .black.opacity(0.5),
+                                in: Capsule()
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint(
+                            "Opens the journal entry for this photo"
+                        )
+                    }
+                }
             }
             .padding()
         }
@@ -112,38 +149,53 @@ struct JournalPhotoViewer: View {
 // MARK: - Zoomable Photo
 
 private struct ZoomableJournalPhoto: View {
-
+    
     // MARK: - Environment
-
+    
     @Environment(\.accessibilityReduceMotion)
     private var reduceMotion
-
+    
     // MARK: - Properties
-
+    
     let photo: JournalPhoto
     let isSelected: Bool
+    let shouldLoadImage: Bool
     let photoLabel: String
     let onDismiss: () -> Void
-
+    
     // MARK: - State
-
+    
     @State private var image: UIImage?
     @State private var loadedPhotoID: UUID?
-
+    
     @State private var scale: CGFloat = 1
     @State private var lastScale: CGFloat = 1
     
     @State private var offset: CGSize = .zero
     @GestureState private var dragTranslation: CGSize? = nil
     @GestureState private var isMagnifying = false
-
+    
     // MARK: - Configuration
-
+    
     private let minimumScale: CGFloat = 1
     private let maximumScale: CGFloat = 4
+    
+    // MARK: - Image Loading
 
+    private struct ImageLoadKey: Equatable {
+        let photoID: UUID
+        let shouldLoad: Bool
+    }
+
+    private var imageLoadKey: ImageLoadKey {
+        ImageLoadKey(
+            photoID: photo.id,
+            shouldLoad: shouldLoadImage
+        )
+    }
+    
     // MARK: - Body
-
+    
     var body: some View {
         GeometryReader { geometry in
             Group {
@@ -186,7 +238,7 @@ private struct ZoomableJournalPhoto: View {
                                 }
                                 .onChanged { value in
                                     let newScale = lastScale * value.magnification
-
+                                    
                                     scale = min(
                                         max(newScale, minimumScale),
                                         maximumScale
@@ -194,7 +246,7 @@ private struct ZoomableJournalPhoto: View {
                                 }
                                 .onEnded { _ in
                                     lastScale = scale
-
+                                    
                                     if dragTranslation == nil {
                                         offset = clampedOffset(
                                             offset,
@@ -216,8 +268,8 @@ private struct ZoomableJournalPhoto: View {
                         .onTapGesture(count: 2) {
                             setScale(
                                 scale > minimumScale
-                                    ? minimumScale
-                                    : 2
+                                ? minimumScale
+                                : 2
                             )
                         }
                         .accessibilityLabel(photoLabel)
@@ -263,18 +315,28 @@ private struct ZoomableJournalPhoto: View {
             .simultaneousGesture(
                 swipeToDismissGesture,
                 isEnabled: isSelected &&
-                    scale == minimumScale &&
-                    !isMagnifying
+                scale == minimumScale &&
+                !isMagnifying
             )
             .onChange(of: geometry.size) { _, _ in
                 setScale(minimumScale, animated: false)
             }
         }
-        .task(id: photo.id) {
+        .task(id: imageLoadKey) {
+            guard !Task.isCancelled else {
+                return
+            }
+            
+            guard shouldLoadImage else {
+                image = nil
+                loadedPhotoID = nil
+                return
+            }
+            
             guard loadedPhotoID != photo.id else {
                 return
             }
-
+            
             image = UIImage(data: photo.imageData)
             loadedPhotoID = photo.id
         }
@@ -283,11 +345,13 @@ private struct ZoomableJournalPhoto: View {
         }
         .onDisappear {
             setScale(minimumScale, animated: false)
+            image = nil
+            loadedPhotoID = nil
         }
     }
-
+    
     // MARK: - Swipe to Dismiss
-
+    
     private var swipeToDismissGesture: some Gesture {
         DragGesture(minimumDistance: 20)
             .onEnded { value in
@@ -296,21 +360,21 @@ private struct ZoomableJournalPhoto: View {
                       !isMagnifying else {
                     return
                 }
-
+                
                 let verticalDistance = value.translation.height
                 let horizontalDistance = abs(value.translation.width)
-
+                
                 guard verticalDistance > 100,
                       verticalDistance > horizontalDistance * 1.5 else {
                     return
                 }
-
+                
                 onDismiss()
             }
     }
     
     // MARK: - Panning
-
+    
     private func panGesture(
         imageSize: CGSize,
         viewportSize: CGSize
@@ -324,7 +388,7 @@ private struct ZoomableJournalPhoto: View {
                     width: offset.width + value.translation.width,
                     height: offset.height + value.translation.height
                 )
-
+                
                 offset = clampedOffset(
                     proposedOffset,
                     imageSize: imageSize,
@@ -332,7 +396,7 @@ private struct ZoomableJournalPhoto: View {
                 )
             }
     }
-
+    
     private func clampedOffset(
         _ proposedOffset: CGSize,
         imageSize: CGSize,
@@ -344,25 +408,25 @@ private struct ZoomableJournalPhoto: View {
               viewportSize.height > 0 else {
             return .zero
         }
-
+        
         let fitScale = min(
             viewportSize.width / imageSize.width,
             viewportSize.height / imageSize.height
         )
-
+        
         let displayedWidth = imageSize.width * fitScale * scale
         let displayedHeight = imageSize.height * fitScale * scale
-
+        
         let maximumX = max(
             (displayedWidth - viewportSize.width) / 2,
             0
         )
-
+        
         let maximumY = max(
             (displayedHeight - viewportSize.height) / 2,
             0
         )
-
+        
         return CGSize(
             width: min(
                 max(proposedOffset.width, -maximumX),
@@ -376,7 +440,7 @@ private struct ZoomableJournalPhoto: View {
     }
     
     // MARK: - Zoom
-
+    
     private func setScale(
         _ newScale: CGFloat,
         animated: Bool = true
@@ -385,10 +449,10 @@ private struct ZoomableJournalPhoto: View {
             max(newScale, minimumScale),
             maximumScale
         )
-
+        
         let animation: Animation? =
-            animated && !reduceMotion ? .smooth : nil
-
+        animated && !reduceMotion ? .smooth : nil
+        
         withAnimation(animation) {
             scale = clampedScale
             lastScale = clampedScale
@@ -401,16 +465,16 @@ private struct ZoomableJournalPhoto: View {
 
 #Preview("Photo Viewer · Three Photos") {
     let entry = SampleData.journalEntryWithPhotos
-
+    
     let container = PreviewContainer.make(
         tasks: [],
         journalEntries: [entry]
     )
-
+    
     let sortedPhotos = entry.photos.sorted {
         $0.position < $1.position
     }
-
+    
     if let firstPhoto = sortedPhotos.first {
         JournalPhotoViewer(
             photos: sortedPhotos,

@@ -21,6 +21,8 @@ struct JournalView: View {
     
     // MARK: - State
     
+    @State private var displayMode: JournalDisplayMode
+    @State private var entryToOpen: JournalEntry?
     @State private var isCreateSheetPresented = false
     @State private var entryToDelete: JournalEntry?
     @State private var deleteErrorMessage: String?
@@ -30,9 +32,11 @@ struct JournalView: View {
     // MARK: - Initialization
 
     init(
-        fileStorage: JournalFileStorage = JournalFileStorage()
+        fileStorage: JournalFileStorage = JournalFileStorage(),
+        displayMode: JournalDisplayMode = .entries
     ) {
         _fileStorage = State(initialValue: fileStorage)
+        _displayMode = State(initialValue: displayMode)
     }
     
     // MARK: - Body
@@ -42,49 +46,35 @@ struct JournalView: View {
             ZStack {
                 AppTheme.background
                     .ignoresSafeArea()
-
+                
                 AnimatedAppBackground()
                     .ignoresSafeArea()
                     .accessibilityHidden(true)
-
-                if entries.isEmpty {
-                    EmptyStateView(
-                        systemImageName: "book.closed",
-                        title: "No Journal Entries",
-                        message: "Write about your day or anything you want to remember"
-                    )
-                } else {
-                    List {
-                        ForEach(entries) { entry in
-                            NavigationLink {
-                                JournalEntryDetailView(
-                                    entry: entry
-                                )
-                            } label: {
-                                JournalEntryCardView(
-                                    entry: entry
-                                )
-                            }
-                            .swipeActions(
-                                edge: .trailing,
-                                allowsFullSwipe: false
-                            ) {
-                                Button(role: .destructive) {
-                                    entryToDelete = entry
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
+                
+                VStack(spacing: 0) {
+                    displayModePicker
+                    
+                    Group {
+                        switch displayMode {
+                        case .entries:
+                            entriesContent
+                            
+                        case .photos:
+                            photosContent
                         }
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .background(Color.clear)
+                    .frame(
+                        maxWidth: .infinity,
+                        maxHeight: .infinity
+                    )
                 }
             }
             .navigationTitle("Journal")
+            .navigationDestination(item: $entryToOpen) { entry in
+                JournalEntryDetailView(
+                    entry: entry
+                )
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -125,7 +115,7 @@ struct JournalView: View {
                 Button("Delete", role: .destructive) {
                     deleteEntry(entry)
                 }
-
+                
                 Button("Cancel", role: .cancel) { }
             } message: { entry in
                 Text(
@@ -151,6 +141,70 @@ struct JournalView: View {
                 Text(deleteErrorMessage ?? "An unknown error occurred.")
             }
         }
+    }
+    
+    // MARK: - Components
+    
+    private var displayModePicker: some View {
+        Picker("Journal display mode", selection: $displayMode) {
+            ForEach(JournalDisplayMode.allCases) { mode in
+                Text(mode.title)
+                    .tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+    }
+    
+    @ViewBuilder
+    private var entriesContent: some View {
+        if entries.isEmpty {
+            EmptyStateView(
+                systemImageName: "book.closed",
+                title: "No Journal Entries",
+                message: "Write about your day or anything you want to remember"
+            )
+            .padding(.horizontal)
+        } else {
+            List {
+                ForEach(entries) { entry in
+                    NavigationLink {
+                        JournalEntryDetailView(
+                            entry: entry
+                        )
+                    } label: {
+                        JournalEntryCardView(
+                            entry: entry
+                        )
+                    }
+                    .swipeActions(
+                        edge: .trailing,
+                        allowsFullSwipe: false
+                    ) {
+                        Button(role: .destructive) {
+                            entryToDelete = entry
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(Color.clear)
+        }
+    }
+    
+    private var photosContent: some View {
+        JournalPhotoGalleryView(
+            entries: entries,
+            onOpenEntry: { entry in
+                entryToOpen = entry
+            }
+        )
     }
     
     // MARK: - Actions
@@ -325,4 +379,64 @@ struct JournalView: View {
         )
         .font(AppTheme.Typography.body)
         .tint(AppTheme.accent)
+}
+
+#Preview("Journal - Photos Across Entries") {
+    let now = Date.now
+    let yesterday = Calendar.current.date(
+        byAdding: .day,
+        value: -1,
+        to: now
+    ) ?? now
+
+    let firstEntry = SampleData.journalEntryWithPhotos
+    firstEntry.title = "Today — Entry A"
+    firstEntry.entryDate = now
+    firstEntry.createdAt = yesterday
+
+    let secondEntry = SampleData.journalEntryWithPhotos
+    secondEntry.title = "Yesterday — Entry B"
+    secondEntry.entryDate = yesterday
+    secondEntry.createdAt = now
+
+    return JournalView(displayMode: .photos)
+        .modelContainer(
+            PreviewContainer.make(
+                tasks: [],
+                journalEntries: [
+                    secondEntry,
+                    firstEntry
+                ]
+            )
+        )
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+}
+
+#Preview("Journal - Empty Photos") {
+    JournalView(displayMode: .photos)
+        .modelContainer(
+            PreviewContainer.make(
+                tasks: [],
+                journalEntries: [],
+                moods: []
+            )
+        )
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+}
+
+#Preview("Journal - Photos Dark Mode") {
+    let entry = SampleData.journalEntryWithPhotos
+
+    JournalView(displayMode: .photos)
+        .modelContainer(
+            PreviewContainer.make(
+                tasks: [],
+                journalEntries: [entry]
+            )
+        )
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+        .preferredColorScheme(.dark)
 }
