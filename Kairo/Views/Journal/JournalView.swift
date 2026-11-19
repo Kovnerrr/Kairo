@@ -12,6 +12,7 @@ struct JournalView: View {
     // MARK: - Data
     
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     
     @Query(
         sort: \JournalEntry.createdAt,
@@ -28,15 +29,30 @@ struct JournalView: View {
     @State private var deleteErrorMessage: String?
     @State private var fileStorage: JournalFileStorage
     @State private var fileSessionID: UUID?
+    @State private var currentDate = Date.now
+    private let previewReferenceDate: Date?
     
     // MARK: - Initialization
 
     init(
         fileStorage: JournalFileStorage = JournalFileStorage(),
-        displayMode: JournalDisplayMode = .entries
+        displayMode: JournalDisplayMode = .entries,
+        previewReferenceDate: Date? = nil
     ) {
         _fileStorage = State(initialValue: fileStorage)
         _displayMode = State(initialValue: displayMode)
+        _currentDate = State(initialValue: previewReferenceDate ?? .now)
+        self.previewReferenceDate = previewReferenceDate
+    }
+    
+    // MARK: - Memories
+    
+    private var onThisDayMemories: [JournalEntry] {
+        OnThisDayMatcher.memories(
+            from: entries,
+            referenceDate: currentDate,
+            calendar: .current
+        )
     }
     
     // MARK: - Body
@@ -140,6 +156,27 @@ struct JournalView: View {
             } message: {
                 Text(deleteErrorMessage ?? "An unknown error occurred.")
             }
+            
+            .onAppear {
+                if previewReferenceDate == nil {
+                    currentDate = .now
+                }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active && previewReferenceDate == nil {
+                    currentDate = .now
+                }
+            }
+            .task {
+                for await _ in NotificationCenter.default.messages(
+                    of: Calendar.self,
+                    for: .calendarDayChanged
+                ) {
+                    if previewReferenceDate == nil {
+                        currentDate = .now
+                    }
+                }
+            }
         }
     }
     
@@ -159,6 +196,7 @@ struct JournalView: View {
     
     @ViewBuilder
     private var entriesContent: some View {
+        let memories = onThisDayMemories
         if entries.isEmpty {
             EmptyStateView(
                 systemImageName: "book.closed",
@@ -168,6 +206,29 @@ struct JournalView: View {
             .padding(.horizontal)
         } else {
             List {
+                if !memories.isEmpty {
+                    Section("On This Day") {
+                        ForEach(memories) { entry in
+                            if let yearsAgo = OnThisDayMatcher.yearsAgo(
+                                entryDate: entry.entryDate,
+                                referenceDate: currentDate,
+                                calendar: .current
+                            ) {
+                                NavigationLink {
+                                    JournalEntryDetailView(entry: entry)
+                                } label: {
+                                    OnThisDayCardView(
+                                        entry: entry,
+                                        yearsAgo: yearsAgo
+                                    )
+                                }
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                            }
+                        }
+                    }
+                }
+                
                 ForEach(entries) { entry in
                     NavigationLink {
                         JournalEntryDetailView(
@@ -430,6 +491,227 @@ struct JournalView: View {
     let entry = SampleData.journalEntryWithPhotos
 
     JournalView(displayMode: .photos)
+        .modelContainer(
+            PreviewContainer.make(
+                tasks: [],
+                journalEntries: [entry]
+            )
+        )
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("On This Day - One Memory") {
+    let calendar = Calendar.current
+
+    let referenceDate = calendar.date(
+        from: DateComponents(
+            year: 2026,
+            month: 11,
+            day: 19,
+            hour: 12
+        )
+    )!
+
+    let previousYear = calendar.date(
+        from: DateComponents(
+            year: 2025,
+            month: 11,
+            day: 19,
+            hour: 9
+        )
+    )!
+
+    let entry = JournalEntry(
+        title: "A memory from last year",
+        bodyText: "A lovely day worth remembering.",
+        entryDate: previousYear
+    )
+
+    return JournalView(previewReferenceDate: referenceDate)
+        .modelContainer(
+            PreviewContainer.make(
+                tasks: [],
+                journalEntries: [entry]
+            )
+        )
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+}
+
+#Preview("On This Day - Multiple Years") {
+    let calendar = Calendar.current
+
+    let referenceDate = calendar.date(
+        from: DateComponents(
+            year: 2026,
+            month: 11,
+            day: 19,
+            hour: 12
+        )
+    )!
+
+    let memories = [2025, 2023, 2024].map { (year: Int) in
+        JournalEntry(
+            title: "Memory from \(year)",
+            bodyText: "An entry from November 19, \(year).",
+            entryDate: calendar.date(
+                from: DateComponents(
+                    year: year,
+                    month: 11,
+                    day: 19,
+                    hour: 9
+                )
+            )!
+        )
+    }
+
+    return JournalView(previewReferenceDate: referenceDate)
+        .modelContainer(
+            PreviewContainer.make(
+                tasks: [],
+                journalEntries: memories
+            )
+        )
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+}
+
+#Preview("On This Day - With Photo") {
+    let calendar = Calendar.current
+
+    let referenceDate = calendar.date(
+        from: DateComponents(
+            year: 2026,
+            month: 11,
+            day: 19,
+            hour: 12
+        )
+    )!
+
+    let entry = SampleData.journalEntryWithPhotos
+
+    entry.title = "Photo memory"
+
+    entry.entryDate = calendar.date(
+        from: DateComponents(
+            year: 2025,
+            month: 11,
+            day: 19,
+            hour: 9
+        )
+    )!
+
+    return JournalView(previewReferenceDate: referenceDate)
+        .modelContainer(
+            PreviewContainer.make(
+                tasks: [],
+                journalEntries: [entry]
+            )
+        )
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+}
+
+#Preview("On This Day - No Matches") {
+    let calendar = Calendar.current
+
+    let referenceDate = calendar.date(
+        from: DateComponents(
+            year: 2026,
+            month: 11,
+            day: 19,
+            hour: 12
+        )
+    )!
+
+    let entry = JournalEntry(
+        title: "Different day",
+        bodyText: "This entry should not appear in On This Day.",
+        entryDate: calendar.date(
+            from: DateComponents(
+                year: 2025,
+                month: 11,
+                day: 18,
+                hour: 9
+            )
+        )!
+    )
+
+    return JournalView(previewReferenceDate: referenceDate)
+        .modelContainer(
+            PreviewContainer.make(
+                tasks: [],
+                journalEntries: [entry]
+            )
+        )
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+}
+
+#Preview("On This Day - Leap Day") {
+    let calendar = Calendar.current
+
+    let referenceDate = calendar.date(
+        from: DateComponents(
+            year: 2028,
+            month: 2,
+            day: 29,
+            hour: 12
+        )
+    )!
+
+    let entry = JournalEntry(
+        title: "Leap day memory",
+        bodyText: "February 29 should match February 29 only.",
+        entryDate: calendar.date(
+            from: DateComponents(
+                year: 2024,
+                month: 2,
+                day: 29,
+                hour: 9
+            )
+        )!
+    )
+
+    return JournalView(previewReferenceDate: referenceDate)
+        .modelContainer(
+            PreviewContainer.make(
+                tasks: [],
+                journalEntries: [entry]
+            )
+        )
+        .font(AppTheme.Typography.body)
+        .tint(AppTheme.accent)
+}
+
+#Preview("On This Day - Dark Mode") {
+    let calendar = Calendar.current
+
+    let referenceDate = calendar.date(
+        from: DateComponents(
+            year: 2026,
+            month: 11,
+            day: 19,
+            hour: 12
+        )
+    )!
+
+    let entry = JournalEntry(
+        title: "A memory in dark mode",
+        bodyText: "Checking the appearance of the memory card.",
+        entryDate: calendar.date(
+            from: DateComponents(
+                year: 2025,
+                month: 11,
+                day: 19,
+                hour: 9
+            )
+        )!
+    )
+
+    return JournalView(previewReferenceDate: referenceDate)
         .modelContainer(
             PreviewContainer.make(
                 tasks: [],
