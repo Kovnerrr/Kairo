@@ -257,10 +257,30 @@ struct TodayView: View {
                         // Mood
                         
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Mood")
-                                .font(AppTheme.Typography.sectionTitle)
-                                .foregroundStyle(.primary)
-                            
+                            HStack {
+                                Text("Mood")
+                                    .font(AppTheme.Typography.sectionTitle)
+                                    .foregroundStyle(.primary)
+                                
+                                Spacer()
+                                
+                                NavigationLink {
+                                    MoodInsightsView()
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text("Insights")
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                    }
+                                    .font(AppTheme.Typography.secondary)
+                                    .foregroundStyle(AppTheme.accent)
+                                    .frame(minHeight: 44)
+                                    .contentShape(Rectangle())
+                                }
+                                .accessibilityLabel("View mood insights")
+                            }
+
                             Text("How are you feeling today?")
                                 .font(AppTheme.Typography.secondary)
                                 .foregroundStyle(.secondary)
