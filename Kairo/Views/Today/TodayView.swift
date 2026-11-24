@@ -118,7 +118,7 @@ struct TodayView: View {
         if let existingMood = moods.first(where: {
             $0.dayKey == currentDayKey
         }) {
-            guard existingMood.mood != mood else {
+            guard existingMood.recordedMood != mood else {
                 return
             }
 
@@ -286,7 +286,7 @@ struct TodayView: View {
                                 .foregroundStyle(.secondary)
                             
                             MoodPickerView(
-                                selectedMood: todayMood?.mood,
+                                selectedMood: todayMood?.recordedMood,
                                 onSelectMood: { mood in
                                     selectMood(mood)
                                 }

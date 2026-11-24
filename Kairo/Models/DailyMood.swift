@@ -37,10 +37,13 @@ final class DailyMood {
     }
     
     // MARK: - Computed Properties
+    var recordedMood: MoodType? {
+        MoodType(rawValue: moodRawValue)
+    }
     
     var mood: MoodType {
         get {
-            MoodType(rawValue: moodRawValue) ?? .okay
+            recordedMood ?? .okay
         }
         set {
             moodRawValue = newValue.rawValue

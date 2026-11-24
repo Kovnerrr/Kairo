@@ -126,9 +126,7 @@ enum MoodInsightsCalculator {
                 dayNumber
             )
             
-            let mood = moodsByDay[dayKey].flatMap {
-                MoodType(rawValue: $0.moodRawValue)
-            }
+            let mood = moodsByDay[dayKey]?.recordedMood
             
             result.append(
                 MoodInsightsDay(

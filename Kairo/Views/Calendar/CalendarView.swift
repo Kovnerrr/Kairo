@@ -163,10 +163,10 @@ struct CalendarView: View {
                             Text("Mood")
                                 .font(AppTheme.Typography.sectionTitle)
 
-                            if let dailyMood = selectedDayMood {
+                            if let mood = selectedDayMood?.recordedMood {
                                 Label(
-                                    dailyMood.mood.title,
-                                    systemImage: dailyMood.mood.symbolName
+                                    mood.title,
+                                    systemImage: mood.symbolName
                                 )
                                 .font(AppTheme.Typography.secondary)
                             } else {
