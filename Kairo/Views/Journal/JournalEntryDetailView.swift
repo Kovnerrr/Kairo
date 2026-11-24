@@ -308,6 +308,11 @@ struct JournalEntryDetailView: View {
                 throw JournalEntrySaveError.entryUnavailable
             }
 
+            guard let originalUpdatedAt = formData.originalUpdatedAt,
+                  currentEntry.updatedAt == originalUpdatedAt else {
+                throw JournalEntrySaveError.entryChanged
+            }
+
             let existingPhotos = Array(currentEntry.photos)
             let existingFiles = Array(currentEntry.files)
 

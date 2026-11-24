@@ -13,6 +13,7 @@ struct JournalEntryFormData {
     var title: String
     var bodyText: String
     var entryDate: Date
+    let originalUpdatedAt: Date?
     var photos: [JournalPhotoDraft] = []
     var files: [JournalFileDraft] = []
     
@@ -33,12 +34,14 @@ struct JournalEntryFormData {
         self.title = title
         self.bodyText = bodyText
         self.entryDate = entryDate
+        self.originalUpdatedAt = nil
     }
     
     init(entry: JournalEntry) {
         self.title = entry.title
         self.bodyText = entry.bodyText
         self.entryDate = entry.entryDate
+        self.originalUpdatedAt = entry.updatedAt
         
         // Load existing photos.
         self.photos = entry.photos
@@ -71,6 +74,7 @@ struct JournalEntryFormData {
 enum JournalEntrySaveError: LocalizedError {
     case invalidForm
     case entryUnavailable
+    case entryChanged
     case attachmentUnavailable
 
     var errorDescription: String? {
@@ -80,6 +84,9 @@ enum JournalEntrySaveError: LocalizedError {
 
         case .entryUnavailable:
             "This journal entry is no longer available."
+
+        case .entryChanged:
+            "This entry was changed in another window. Reopen it before saving."
 
         case .attachmentUnavailable:
             "An attachment is no longer available. Reopen the entry and try again."
