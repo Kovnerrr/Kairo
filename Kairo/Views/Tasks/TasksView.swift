@@ -21,6 +21,7 @@ struct TasksView: View {
     @State private var isFilterSheetPresented = false
     @State private var currentDate = Date.now
     @State private var taskToOpenID: UUID?
+    @State private var taskSaveErrorMessage: String?
     
     // MARK: - Computed Properties
     private var trimmedSearchText: String {
@@ -204,7 +205,7 @@ struct TasksView: View {
                     guard let openedTaskID = taskToOpenID else {
                         return
                     }
-
+                    
                     if !existingTaskIDs.contains(openedTaskID) {
                         taskToOpenID = nil
                     }
@@ -249,35 +250,54 @@ struct TasksView: View {
                 }
                 
                 .sheet(item: $viewModel.formRoute) { route in
-                    switch route {
-                    case .create:
-                        TaskFormView(
-                            navigationTitle: "New Task",
-                            onCancel: {
-                                viewModel.closeForm()
-                            },
-                            onSave: { formData in
-                                createTask(from: formData)
+                    Group {
+                        switch route {
+                        case .create:
+                            TaskFormView(
+                                navigationTitle: "New Task",
+                                onCancel: {
+                                    viewModel.closeForm()
+                                },
+                                onSave: { formData in
+                                    createTask(from: formData)
+                                }
+                            )
+                            
+                        case .edit(let task):
+                            TaskFormView(
+                                navigationTitle: "Edit Task",
+                                initialData: TaskFormData(
+                                    title: task.title,
+                                    taskDescription: task.taskDescription,
+                                    dueDate: task.dueDate,
+                                    priority: task.priority,
+                                    category: task.category
+                                ),
+                                onCancel: {
+                                    viewModel.closeForm()
+                                },
+                                onSave: { formData in
+                                    updateTask(task, with: formData)
+                                }
+                            )
+                        }
+                    }
+                    .alert(
+                        "Unable to Save Task",
+                        isPresented: Binding(
+                            get: { taskSaveErrorMessage != nil },
+                            set: { isPresented in
+                                if !isPresented {
+                                    taskSaveErrorMessage = nil
+                                }
                             }
                         )
-                        
-                    case .edit(let task):
-                        TaskFormView(
-                            navigationTitle: "Edit Task",
-                            initialData: TaskFormData(
-                                title: task.title,
-                                taskDescription: task.taskDescription,
-                                dueDate: task.dueDate,
-                                priority: task.priority,
-                                category: task.category
-                            ),
-                            onCancel: {
-                                viewModel.closeForm()
-                            },
-                            onSave: { formData in
-                                updateTask(task, with: formData)
-                            }
-                        )
+                    ) {
+                        Button("OK", role: .cancel) {
+                            taskSaveErrorMessage = nil
+                        }
+                    } message: {
+                        Text(taskSaveErrorMessage ?? "")
                     }
                 }
             }
@@ -294,17 +314,40 @@ struct TasksView: View {
             category: formData.category
         )
         modelContext.insert(task)
-        viewModel.closeForm()
+        
+        do {
+            try modelContext.save()
+            viewModel.closeForm()
+        } catch {
+            modelContext.delete(task)
+            taskSaveErrorMessage = error.localizedDescription
+        }
     }
     
     private func updateTask(_ task: TaskItem, with formData: TaskFormData) {
+        let previousTitle = task.title
+        let previousDescription = task.taskDescription
+        let previousDueDate = task.dueDate
+        let previousPriority = task.priorityRaw
+        let previousCategory = task.categoryRaw
+        
         task.title = formData.title
         task.taskDescription = formData.taskDescription
         task.dueDate = formData.dueDate
         task.priority = formData.priority
         task.category = formData.category
         
-        viewModel.closeForm()
+        do {
+            try modelContext.save()
+            viewModel.closeForm()
+        } catch {
+            task.title = previousTitle
+            task.taskDescription = previousDescription
+            task.dueDate = previousDueDate
+            task.priorityRaw = previousPriority
+            task.categoryRaw = previousCategory
+            taskSaveErrorMessage = error.localizedDescription
+        }
     }
     
     private func toggleTaskCompletion(_ task: TaskItem) {
@@ -329,13 +372,13 @@ struct TasksView: View {
 #Preview("Tasks - Long Text / Large Type") {
     let tasks = SampleData.tasks
     tasks[0].title =
-        "Prepare a detailed review of the Calendar module and write down the next steps"
-
+    "Prepare a detailed review of the Calendar module and write down the next steps"
+    
     let container = PreviewContainer.make(
         tasks: tasks,
         journalEntries: []
     )
-
+    
     return TasksView()
         .modelContainer(container)
         .font(AppTheme.Typography.body)
